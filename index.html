@@ -740,6 +740,275 @@ async function renderAlertas() {
 
 async function renderRelatorio() {
   const empresaId = perfil?.empresa_id;
+  const sec = document.getElementById('sec-relatorio');
+
+  sec.innerHTML = `
+    <div style="margin-bottom:24px">
+      <div class="s-titulo">Relatório interpretativo</div>
+      <div style="font-size:12px;color:var(--ink2);margin-top:4px">Gerado automaticamente · baseado nos dados reais da empresa</div>
+    </div>
+    <div class="loading">Carregando relatório...</div>
+  `;
+
+  if (!empresaId) {
+    sec.innerHTML += '<p style="color:var(--ink2);font-style:italic;text-align:center">Empresa não identificada.</p>';
+    return;
+  }
+
+  // ── Buscar todos os dados do Supabase ──
+  const [
+    { data: colabs },
+    { data: diags },
+    { data: alertas },
+    { data: respostas }
+  ] = await Promise.all([
+    sb.from('perfis').select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador'),
+    sb.from('diagnosticos').select('*').eq('empresa_id', empresaId).eq('status', 'completo'),
+    sb.from('alertas_empresa').select('*').eq('empresa_id', empresaId).eq('status', 'ativo'),
+    sb.from('respostas_diagnostico').select('*, perguntas_diagnostico(eixo)').eq('empresa_id', empresaId)
+  ]);
+
+  const totalColab = colabs?.length || 0;
+  const totalDiag  = diags?.length  || 0;
+  const adesao     = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
+
+  // Scores por nível de risco
+  const baixo  = diags?.filter(d => d.nivel_risco === 'baixo').length  || 0;
+  const medio  = diags?.filter(d => d.nivel_risco === 'medio').length  || 0;
+  const alto   = diags?.filter(d => d.nivel_risco === 'alto').length   || 0;
+
+  // Score médio geral
+  const scores = diags?.map(d => d.score_total || 0) || [];
+  const mediaScore = scores.length > 0
+    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    : 0;
+
+  // Scores médios por eixo
+  const eixoMap = {
+    organizacao_trabalho:       { label: 'Organização do trabalho',    campo: 'score_organizacao' },
+    condicoes_trabalho:         { label: 'Condições do trabalho',      campo: 'score_condicoes'   },
+    relacoes_socioprofissionais:{ label: 'Relações socioprofissionais', campo: 'score_relacoes'    },
+    reconhecimento_crescimento: { label: 'Reconhecimento e crescimento',campo: 'score_reconhecimento' },
+    elo_trabalho_vida:          { label: 'Elo trabalho e vida social',  campo: 'score_elo'         }
+  };
+
+  const eixos = Object.entries(eixoMap).map(([key, { label, campo }]) => {
+    const vals = diags?.map(d => d[campo]).filter(v => v != null) || [];
+    const score = vals.length > 0
+      ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+      : null;
+    return { key, label, score };
+  }).filter(e => e.score !== null);
+
+  // Eixo mais crítico e mais positivo
+  const eixoCritico  = eixos.length > 0 ? eixos.reduce((a, b) => a.score < b.score ? a : b) : null;
+  const eixoPositivo = eixos.length > 0 ? eixos.reduce((a, b) => a.score > b.score ? a : b) : null;
+
+  // Nível geral
+  const nivel      = mediaScore >= 70 ? 'baixo' : mediaScore >= 40 ? 'medio' : 'alto';
+  const nivelLabel = nivel === 'baixo' ? 'Baixo' : nivel === 'medio' ? 'Médio' : 'Alto';
+  const corNivel   = nivel === 'baixo' ? 'var(--baixo)' : nivel === 'medio' ? 'var(--medio)' : 'var(--alto)';
+
+  // ── Análise interpretativa (template inteligente) ──
+  let resumo = '';
+  if (totalDiag === 0) {
+    resumo = 'Nenhum diagnóstico foi realizado ainda. Convide seus colaboradores para responderem o questionário psicossocial — os resultados permitirão identificar pontos de atenção e gerar recomendações personalizadas para a empresa.';
+  } else {
+    resumo = `A empresa apresenta índice geral de risco <strong style="color:${corNivel}">${nivelLabel} (${mediaScore}/100)</strong> com base em ${totalDiag} diagnóstico${totalDiag > 1 ? 's' : ''} de ${totalColab} colaborador${totalColab > 1 ? 'es' : ''} — adesão de ${adesao}%.`;
+    if (alto > 0)
+      resumo += ` <strong>${alto} colaborador${alto > 1 ? 'es requerem' : ' requer'} atenção imediata</strong> por apresentar risco alto — recomenda-se agendar acompanhamento psicológico urgente.`;
+    if (medio > 0)
+      resumo += ` ${medio} colaborador${medio > 1 ? 'es estão' : ' está'} em nível médio e devem ser monitorados nas próximas semanas.`;
+    if (eixoCritico)
+      resumo += ` O eixo mais crítico é <strong>"${eixoCritico.label}"</strong> (score ${eixoCritico.score}), indicando necessidade de intervenção nessa dimensão.`;
+    if (eixoPositivo && eixoPositivo.key !== eixoCritico?.key)
+      resumo += ` O ponto mais positivo da empresa é <strong>"${eixoPositivo.label}"</strong> (score ${eixoPositivo.score}).`;
+    if (adesao < 50)
+      resumo += ` A taxa de adesão de ${adesao}% está abaixo do recomendado — ações de comunicação interna podem aumentar a participação.`;
+    else if (adesao >= 70)
+      resumo += ` A taxa de adesão de ${adesao}% está dentro da meta — bom engajamento da equipe.`;
+  }
+
+  // ── Recomendações priorizadas ──
+  const recs = [];
+  if (alto > 0)
+    recs.push({ texto: `Agendar acompanhamento psicológico urgente para os ${alto} colaborador${alto > 1 ? 'es' : ''} com risco alto identificados.`, prazo: 'Esta semana', cor: 'var(--alto)' });
+  if (adesao < 70)
+    recs.push({ texto: `Aumentar a taxa de adesão ao diagnóstico (${adesao}% atual → meta 70%) com comunicação interna reforçando o sigilo e os benefícios.`, prazo: 'Próximas 2 semanas', cor: 'var(--medio)' });
+  if (medio > 0)
+    recs.push({ texto: `Monitorar os ${medio} colaborador${medio > 1 ? 'es' : ''} em risco médio — reaplicar diagnóstico em 30 dias para verificar evolução.`, prazo: 'Este mês', cor: 'var(--medio)' });
+  if (eixoCritico && eixoCritico.score < 60)
+    recs.push({ texto: `Criar programa focado em "${eixoCritico.label}" (score ${eixoCritico.score}) — o eixo mais crítico. Considere workshops, rodas de conversa ou revisão de política interna.`, prazo: 'Este mês', cor: 'var(--medio)' });
+  if (totalDiag === 0)
+    recs.push({ texto: 'Lançar campanha interna de sensibilização para que os colaboradores realizem o diagnóstico psicossocial.', prazo: 'Imediato', cor: 'var(--alto)' });
+  if (recs.length === 0)
+    recs.push({ texto: 'Manter acompanhamento periódico e incentivar novos diagnósticos para monitorar a evolução da saúde psicossocial da equipe.', prazo: 'Mensal', cor: 'var(--baixo)' });
+
+  // ── Ações do próximo mês ──
+  const acoes = [];
+  if (totalDiag < totalColab)
+    acoes.push(`Convidar os ${totalColab - totalDiag} colaborador${totalColab - totalDiag > 1 ? 'es que ainda não realizaram' : ' que ainda não realizou'} o diagnóstico.`);
+  else
+    acoes.push('Reaplicar o diagnóstico para monitorar evolução mensal.');
+  if (alto > 0)
+    acoes.push(`Iniciar acompanhamento individual dos ${alto} caso${alto > 1 ? 's' : ''} críticos com o psicólogo parceiro.`);
+  else
+    acoes.push('Manter canais abertos para sessões voluntárias de apoio psicológico.');
+  acoes.push('Compartilhar resultados agregados com a liderança e alinhar ações.');
+  acoes.push('Disponibilizar novos conteúdos de saúde mental na biblioteca da plataforma.');
+
+  // ── Alertas do Supabase ──
+  const alertasHtml = alertas?.length > 0
+    ? alertas.map(a => `
+        <div class="alerta-item">
+          <div class="a-dot ${a.nivel_alerta === 'alto' ? 'd-alto' : 'd-medio'}"></div>
+          <div>
+            <div class="a-titulo">${a.tipo_alerta}</div>
+            <div class="a-desc">${a.descricao}</div>
+            ${a.recomendado ? `<div style="font-size:11px;color:var(--verde);margin-top:4px;font-weight:500">→ ${a.recomendado}</div>` : ''}
+            <div class="a-data">${new Date(a.created_at).toLocaleDateString('pt-BR')}</div>
+          </div>
+        </div>
+      `).join('')
+    : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>';
+
+  // ── Renderizar tudo ──
+  const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  sec.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="s-titulo">Relatório de saúde psicossocial</div>
+        <div style="font-size:12px;color:var(--ink2);margin-top:4px">Gerado em ${dataHoje} · ${empresa?.nome_empresa || 'Sua empresa'}</div>
+      </div>
+      <button class="btn-sec" onclick="renderRelatorio()" style="font-size:12px">↻ Atualizar</button>
+    </div>
+
+    <!-- Métricas -->
+    <div class="metrics" style="margin-bottom:24px">
+      <div class="m-card c-dourado">
+        <div class="m-lbl">Colaboradores</div>
+        <div class="m-val">${totalColab}</div>
+        <div class="m-sub">cadastrados na plataforma</div>
+      </div>
+      <div class="m-card c-azul">
+        <div class="m-lbl">Diagnósticos</div>
+        <div class="m-val">${totalDiag}</div>
+        <div class="m-sub">realizados até hoje</div>
+      </div>
+      <div class="m-card c-verde">
+        <div class="m-lbl">Taxa de adesão</div>
+        <div class="m-val">${adesao}%</div>
+        <div class="m-sub"><span class="trend ${adesao >= 70 ? 't-up' : 't-down'}">${adesao >= 70 ? '✓ Meta atingida' : 'Abaixo da meta'}</span></div>
+      </div>
+      <div class="m-card c-amarelo">
+        <div class="m-lbl">Score médio</div>
+        <div class="m-val">${mediaScore || '—'}</div>
+        <div class="m-sub">índice geral <span class="trend ${nivel === 'baixo' ? 't-up' : nivel === 'medio' ? 't-neu' : 't-down'}">${nivelLabel}</span></div>
+      </div>
+    </div>
+
+    <!-- Análise IA -->
+    <div class="ia-box" style="margin-bottom:24px">
+      <div class="ia-icon">✦</div>
+      <div>
+        <div class="ia-label">Análise interpretativa automática</div>
+        <div class="ia-txt">${resumo}</div>
+      </div>
+    </div>
+
+    <!-- Distribuição + Eixos -->
+    <div class="secoes" style="margin-bottom:24px">
+      <div class="s-card">
+        <div class="s-titulo">Distribuição de risco</div>
+        <div class="s-sub">Colaboradores por nível de atenção</div>
+        ${[
+          { label: 'Risco baixo', val: baixo, cls: 'bf-baixo', badge: 'rs-baixo' },
+          { label: 'Risco médio', val: medio, cls: 'bf-medio', badge: 'rs-medio' },
+          { label: 'Risco alto',  val: alto,  cls: 'bf-alto',  badge: 'rs-alto'  }
+        ].map(r => `
+          <div class="risco-item">
+            <div class="ri-header">
+              <span class="ri-nome">${r.label}</span>
+              <span class="ri-score ${r.badge}">${r.val} colab. · ${totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0}%</span>
+            </div>
+            <div class="barra"><div class="bf ${r.cls}" style="width:${totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0}%"></div></div>
+          </div>
+        `).join('')}
+        ${totalDiag === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">Nenhum diagnóstico realizado.</p>' : ''}
+      </div>
+
+      <div class="s-card">
+        <div class="s-titulo">Score por eixo psicossocial</div>
+        <div class="s-sub">Média dos diagnósticos por dimensão</div>
+        ${eixos.length > 0 ? eixos.map(e => {
+          const cor = e.score >= 70 ? 'bf-baixo' : e.score >= 40 ? 'bf-medio' : 'bf-alto';
+          const badge = e.score >= 70 ? 'rs-baixo' : e.score >= 40 ? 'rs-medio' : 'rs-alto';
+          return `
+            <div class="risco-item">
+              <div class="ri-header">
+                <span class="ri-nome" style="font-size:12px">${e.label}</span>
+                <span class="ri-score ${badge}">${e.score}</span>
+              </div>
+              <div class="barra"><div class="bf ${cor}" style="width:${e.score}%"></div></div>
+            </div>
+          `;
+        }).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">Dados insuficientes.</p>'}
+      </div>
+    </div>
+
+    <!-- Alertas -->
+    <div class="s-card" style="margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="s-titulo">Alertas identificados</div>
+        ${alertas?.length > 0 ? `<span class="tag-dourado">${alertas.length} ativo${alertas.length > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <div class="s-sub">Gerados automaticamente com base nos diagnósticos</div>
+      ${alertasHtml}
+    </div>
+
+    <!-- Recomendações -->
+    <div class="s-card" style="margin-bottom:24px">
+      <div class="s-titulo">Recomendações prioritárias</div>
+      <div class="s-sub">Ordenadas por urgência com base nos dados</div>
+      ${recs.map((r, i) => `
+        <div class="alerta-item">
+          <div style="width:22px;height:22px;border-radius:50%;background:rgba(27,58,52,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde);flex-shrink:0;margin-top:2px">${i + 1}</div>
+          <div>
+            <div class="a-titulo">${r.texto}</div>
+            <div style="font-size:11px;color:var(--ink2);margin-top:3px">Prazo sugerido: <strong>${r.prazo}</strong></div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Ações do próximo mês -->
+    <div class="s-card">
+      <div class="s-titulo">Ações para o próximo mês</div>
+      <div class="s-sub">Checklist prático para o RH</div>
+      ${acoes.map((a, i) => `
+        <div class="alerta-item">
+          <div style="width:22px;height:22px;border-radius:50%;background:rgba(53,84,93,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde2);flex-shrink:0;margin-top:2px">${i + 1}</div>
+          <div class="a-titulo" style="font-weight:400">${a}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Salvar no banco para histórico
+  if (totalDiag > 0) {
+    await sb.from('relatorios_empresa').upsert({
+      empresa_id: empresaId,
+      total_colaboradores: totalColab,
+      total_diagnosticos: totalDiag,
+      percentual_engajamento: adesao,
+      media_score_risco: mediaScore,
+      resumo_ia: resumo.replace(/<[^>]+>/g, ''),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'empresa_id' });
+  }
+}
+  const empresaId = perfil?.empresa_id;
   if (!empresaId) { document.getElementById('sec-relatorio').innerHTML = '<div class="loading">Carregando...</div>'; return; }
 
   const { data: rel } = await sb.from('relatorios_empresa').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(1).single();
