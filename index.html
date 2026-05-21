@@ -604,10 +604,10 @@ function calcularTrilhasRecomendadas(diag) {
   // Mapeamento: eixo → trilha(s) por nível de score
   // Score < 40 = crítico, < 60 = alto, < 75 = moderado, >= 75 = baixo
 
-  // EIXO 1: Organização do trabalho
+  // EIXO 1: Organização do trabalho (EACT: score alto = risco alto)
   var org = diag.score_organizacao;
   if (org != null) {
-    if (org < 40) {
+    if (org >= 67) {
       trilhas.push({
         id: 2, nome: 'Prevenção de Exaustão Operacional',
         motivo: 'Organização do trabalho com nível crítico (' + org + '/100)',
@@ -615,11 +615,11 @@ function calcularTrilhasRecomendadas(diag) {
         eixo: 'organizacao_trabalho', score_eixo: org,
         publico: 'colaborador', modulos: 6
       });
-    } else if (org < 75) {
+    } else if (org >= 34) {
       trilhas.push({
         id: 1, nome: 'Gestão de Demanda e Previsibilidade',
         motivo: 'Organização do trabalho com atenção necessária (' + org + '/100)',
-        nivel: org < 60 ? 'Alto' : 'Moderado', emoji: '🟡', cor: '#D4860A',
+        nivel: org >= 50 ? 'Alto' : 'Moderado', emoji: '🟡', cor: '#D4860A',
         eixo: 'organizacao_trabalho', score_eixo: org,
         publico: 'colaborador', modulos: 5
       });
@@ -628,7 +628,7 @@ function calcularTrilhasRecomendadas(diag) {
 
   // EIXO 2: Condições do trabalho
   var cond = diag.score_condicoes;
-  if (cond != null && cond < 75) {
+  if (cond != null && cond >= 34) {
     trilhas.push({
       id: 5, nome: 'Clareza Operacional e Redução de Estresse',
       motivo: 'Condições do trabalho abaixo do esperado (' + cond + '/100)',
@@ -642,7 +642,7 @@ function calcularTrilhasRecomendadas(diag) {
   // EIXO 3: Relações socioprofissionais
   var rel = diag.score_relacoes;
   if (rel != null) {
-    if (rel < 60) {
+    if (rel >= 50) {
       trilhas.push({
         id: 3, nome: 'Segurança Psicológica no Trabalho',
         motivo: 'Relações socioprofissionais com risco identificado (' + rel + '/100)',
@@ -651,7 +651,7 @@ function calcularTrilhasRecomendadas(diag) {
         publico: 'colaborador', modulos: 5
       });
     }
-    if (rel < 75) {
+    if (rel >= 34) {
       trilhas.push({
         id: 6, nome: 'Comunicação Assertiva no Trabalho',
         motivo: 'Relações interpessoais com oportunidade de melhoria (' + rel + '/100)',
@@ -664,7 +664,7 @@ function calcularTrilhasRecomendadas(diag) {
 
   // EIXO 4: Reconhecimento e crescimento
   var rec = diag.score_reconhecimento;
-  if (rec != null && rec < 75) {
+  if (rec != null && rec >= 34) {
     trilhas.push({
       id: 9, nome: 'Reconhecimento, Autonomia e Propósito',
       motivo: 'Baixo reconhecimento e autonomia percebidos (' + rec + '/100)',
@@ -678,7 +678,7 @@ function calcularTrilhasRecomendadas(diag) {
   // EIXO 5: Elo trabalho e vida social
   var elo = diag.score_elo;
   if (elo != null) {
-    if (elo < 60) {
+    if (elo >= 50) {
       trilhas.push({
         id: 7, nome: 'Regulação Emocional no Ambiente de Trabalho',
         motivo: 'Elo trabalho-vida social comprometido (' + elo + '/100)',
@@ -687,7 +687,7 @@ function calcularTrilhasRecomendadas(diag) {
         publico: 'colaborador', modulos: 5
       });
     }
-    if (elo < 75) {
+    if (elo >= 34) {
       trilhas.push({
         id: 8, nome: 'Gestão de Rotina e Previsibilidade',
         motivo: 'Previsibilidade e equilíbrio trabalho-vida com atenção (' + elo + '/100)',
@@ -1179,15 +1179,16 @@ async function renderRelatorio() {
         riscos = ['Conflito trabalho-família', 'Pressão constante', 'Insegurança psicológica'];
       }
 
-      if (e.score < 40) {
+      // EACT: score alto = risco alto
+      if (e.score >= 67) {
         gravidade    = 'Alta';
         probabilidade = 'Alta';
         nivelRisco   = 'Crítico';
-      } else if (e.score < 60) {
+      } else if (e.score >= 50) {
         gravidade    = 'Alta';
         probabilidade = 'Média';
         nivelRisco   = 'Alto';
-      } else if (e.score < 75) {
+      } else if (e.score >= 34) {
         gravidade    = 'Média';
         probabilidade = 'Média';
         nivelRisco   = 'Moderado';
@@ -1339,8 +1340,8 @@ async function renderRelatorio() {
 
   // ── HTML dos eixos ──
   var eixosHtml = eixos.length > 0 ? eixos.map(function(e) {
-    var cor   = e.score >= 70 ? 'bf-baixo' : e.score >= 40 ? 'bf-medio' : 'bf-alto';
-    var badge = e.score >= 70 ? 'rs-baixo' : e.score >= 40 ? 'rs-medio' : 'rs-alto';
+    var cor   = e.score <= 33 ? 'bf-baixo' : e.score <= 66 ? 'bf-medio' : 'bf-alto';
+    var badge = e.score <= 33 ? 'rs-baixo' : e.score <= 66 ? 'rs-medio' : 'rs-alto';
     return '<div class="risco-item">' +
       '<div class="ri-header"><span class="ri-nome" style="font-size:12px">' + e.label + '</span><span class="ri-score ' + badge + '">' + e.score + '</span></div>' +
       '<div class="barra"><div class="bf ' + cor + '" style="width:' + e.score + '%"></div></div>' +
@@ -1718,8 +1719,11 @@ async function finalizarDiagnostico() {
       pesos[p.eixo]  = (pesos[p.eixo]  || 0) + 5 * peso;
     }
   });
+  // EACT: score alto = maior exposição ao fator de risco = risco alto
+  // Normalização: 0% = nunca (risco baixo) · 100% = sempre (risco crítico)
   const scoreNorm = pesoTotal > 0 ? Math.round(((somaTotal - pesoTotal/5) / (pesoTotal - pesoTotal/5)) * 100) : 50;
-  const nivelRisco = scoreNorm >= 70 ? 'baixo' : scoreNorm >= 40 ? 'medio' : 'alto';
+  // Classificação EACT: 0-33 baixo · 34-66 moderado · 67-100 alto
+  const nivelRisco = scoreNorm <= 33 ? 'baixo' : scoreNorm <= 66 ? 'medio' : 'alto';
   const scoresPorEixo = {};
   Object.keys(scores).forEach(e => {
     scoresPorEixo[e] = pesos[e] > 0 ? Math.round(((scores[e] - pesos[e]/5) / (pesos[e] - pesos[e]/5)) * 100) : 50;
