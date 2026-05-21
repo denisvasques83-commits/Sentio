@@ -1514,9 +1514,7 @@ async function renderRelatorio() {
         nomeEmpresa, cnpj, periodo, dataHoje,
         totalColab, totalDiag, adesao, mediaScore,
         nivelLabel, baixo, medio, alto, analise,
-        eixos, inventario, planoAcao: recs.map(function(r, i) {
-          return { problema: 'Ação ' + (i+1), acao: r.texto, responsavel: 'RH', prazo: r.prazo, prioridade: r.prazo === 'Esta semana' ? 'Urgente' : r.prazo === 'Imediato' ? 'Urgente' : 'Médio' };
-        }),
+        eixos, inventario, planoAcao: planoAcao,
         historico: historico || []
       });
     };
@@ -2200,10 +2198,25 @@ function exportarRelatorioPDF(dados) {
   </div>
   </body></html>`;
 
-  const janela = window.open('', '_blank');
-  janela.document.write(html);
-  janela.document.close();
-  janela.onload = function() { janela.print(); };
+  try {
+    const janela = window.open('', '_blank');
+    if (janela) {
+      janela.document.write(html);
+      janela.document.close();
+      janela.onload = function() { janela.print(); };
+    } else { throw new Error('bloqueado'); }
+  } catch(e) {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'relatorio-sentio-' + new Date().toISOString().slice(0,10) + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('Arquivo baixado! Abra no navegador e use Ctrl+P para salvar como PDF.');
+  }
 }
 </script>
 </body>
