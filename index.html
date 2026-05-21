@@ -232,6 +232,7 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
           <span id="badge-alertas" style="margin-left:auto;background:var(--alto);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;display:none">0</span>
         </div>
         <div class="nav-item" onclick="navegarGestor('relatorio',this)"><span class="nav-ic">▦</span> Relatório IA</div>
+        <div class="nav-item" onclick="navegarGestor('configuracoes',this)"><span class="nav-ic">⚙</span> Configurações</div>
         <div class="nav-item" style="margin-top:8px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
       </nav>
       <div class="s-footer">
@@ -259,6 +260,7 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
       <div id="sec-conteudos" class="m-content" style="display:none"></div>
       <div id="sec-alertas" class="m-content" style="display:none"></div>
       <div id="sec-relatorio" class="m-content" style="display:none"></div>
+      <div id="sec-configuracoes" class="m-content" style="display:none"></div>
     </main>
   </div>
 </div>
@@ -409,11 +411,12 @@ function trocarTela(id) {
 function navegarGestor(secao, el) {
   document.querySelectorAll('#sidebar-gestor .nav-item').forEach(n => n.classList.remove('on'));
   if (el) el.classList.add('on');
-  ['dashboard','sessoes','conteudos','alertas','relatorio'].forEach(s => {
+  ['dashboard','sessoes','conteudos','alertas','relatorio','configuracoes'].forEach(s => {
     document.getElementById('sec-'+s).style.display = s === secao ? 'block' : 'none';
   });
-  const titulos = { dashboard:'Dashboard', sessoes:'Sessões', conteudos:'Conteúdos', alertas:'Alertas', relatorio:'Relatório IA' };
+  const titulos = { dashboard:'Dashboard', sessoes:'Sessões', conteudos:'Conteúdos', alertas:'Alertas', relatorio:'Relatório IA', configuracoes:'Configurações' };
   document.getElementById('titulo-gestor').textContent = titulos[secao] || secao;
+  if (secao === 'configuracoes') renderSetores();
 }
 
 function navegarColab(secao, el) {
@@ -1473,7 +1476,7 @@ async function renderRelatorio() {
       '</div>' +
     '</div>';
 
-  // Salvar no banco
+  // Salvar snapshot no histórico
   if (totalDiag > 0) {
     await sb.from('relatorios_empresa').upsert({
       empresa_id:              empresaId,
@@ -1484,6 +1487,78 @@ async function renderRelatorio() {
       resumo_ia:               analise,
       updated_at:              new Date().toISOString()
     }, { onConflict: 'empresa_id' });
+
+    await salvarSnapshotRelatorio({
+      totalColab, totalDiag, adesao, mediaScore,
+      baixo, medio, alto, eixos, analise
+    });
+  }
+
+  // Buscar histórico de ciclos anteriores
+  const { data: historico } = await sb.from('historico_relatorios')
+    .select('*').eq('empresa_id', empresaId)
+    .order('created_at', { ascending: false }).limit(6);
+
+  // Adicionar seção de histórico e botão PDF ao relatório
+  const secEl = document.getElementById('sec-relatorio');
+
+  // Botão PDF no topo
+  const btnPDF = secEl.querySelector('button.btn-sec');
+  if (btnPDF) {
+    const btnPDFNovo = document.createElement('button');
+    btnPDFNovo.className = 'btn-pri';
+    btnPDFNovo.style.fontSize = '12px';
+    btnPDFNovo.textContent = '⬇ Baixar PDF';
+    btnPDFNovo.onclick = function() {
+      exportarRelatorioPDF({
+        nomeEmpresa, cnpj, periodo, dataHoje,
+        totalColab, totalDiag, adesao, mediaScore,
+        nivelLabel, baixo, medio, alto, analise,
+        eixos, inventario, planoAcao: recs.map(function(r, i) {
+          return { problema: 'Ação ' + (i+1), acao: r.texto, responsavel: 'RH', prazo: r.prazo, prioridade: r.prazo === 'Esta semana' ? 'Urgente' : r.prazo === 'Imediato' ? 'Urgente' : 'Médio' };
+        }),
+        historico: historico || []
+      });
+    };
+    btnPDF.parentNode.insertBefore(btnPDFNovo, btnPDF);
+  }
+
+  // Seção de histórico
+  const histDiv = document.createElement('div');
+  histDiv.className = 's-card';
+  histDiv.style.marginTop = '24px';
+  histDiv.innerHTML = '<div class="s-titulo" style="margin-bottom:4px">Histórico de monitoramento</div>' +
+    '<div style="font-size:11px;color:var(--ink2);margin-bottom:16px">Evolução por ciclo de diagnóstico — NR-01 exige monitoramento contínuo</div>' +
+    gerarHtmlHistorico(historico);
+  secEl.appendChild(histDiv);
+
+  // Análise por setor
+  const { data: setores } = await sb.from('setores_empresa')
+    .select('*').eq('empresa_id', empresaId).eq('ativo', true);
+
+  if (setores && setores.length > 0 && totalDiag > 0) {
+    const { data: colabsSetor } = await sb.from('perfis')
+      .select('id,setor').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador');
+
+    const setorDiv = document.createElement('div');
+    setorDiv.className = 's-card';
+    setorDiv.style.marginTop = '24px';
+
+    var setorHtml = '<div class="s-titulo" style="margin-bottom:4px">Análise por setor</div>' +
+      '<div style="font-size:11px;color:var(--ink2);margin-bottom:16px">Distribuição de colaboradores e diagnósticos por área</div>';
+
+    setores.forEach(function(s) {
+      const membros = colabsSetor ? colabsSetor.filter(function(c) { return c.setor === s.nome; }) : [];
+      setorHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--neutro2)">' +
+        '<div style="font-size:13px;font-weight:500;color:var(--ink)">' + s.nome + '</div>' +
+        '<div style="display:flex;gap:16px">' +
+          '<span style="font-size:12px;color:var(--ink2)">' + membros.length + ' colaborador' + (membros.length !== 1 ? 'es' : '') + '</span>' +
+        '</div>' +
+      '</div>';
+    });
+
+    setorDiv.innerHTML = setorHtml;
+    secEl.appendChild(setorDiv);
   }
 }
 async function abrirHomeColaborador() {
@@ -1678,6 +1753,457 @@ async function finalizarDiagnostico() {
       <button class="btn-p" onclick="navegarColab('home', null)">Voltar ao início</button>
     </div>
   `;
+}
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO: SETORES CONFIGURÁVEIS
+// ══════════════════════════════════════════════════════════════════
+
+async function renderSetores() {
+  const empresaId = perfil?.empresa_id;
+  const sec = document.getElementById('sec-configuracoes');
+  if (!sec) return;
+
+  const { data: setores } = await sb.from('setores_empresa')
+    .select('*').eq('empresa_id', empresaId).eq('ativo', true).order('nome');
+
+  const { data: colabs } = await sb.from('perfis')
+    .select('id,nome,cargo,setor').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador');
+
+  sec.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="s-titulo">Configurações da empresa</div>
+        <div style="font-size:12px;color:var(--ink2);margin-top:4px">Setores e estrutura organizacional</div>
+      </div>
+      <button class="btn-pri" onclick="abrirModalSetor()">+ Novo setor</button>
+    </div>
+
+    <div class="secoes" style="margin-bottom:24px">
+      <div class="s-card">
+        <div class="s-titulo" style="margin-bottom:4px">Setores cadastrados</div>
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:16px">${setores?.length || 0} setores ativos</div>
+        <div id="lista-setores">
+          ${setores?.length > 0 ? setores.map(s => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--neutro2)">
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--ink)">${s.nome}</div>
+                ${s.descricao ? `<div style="font-size:11px;color:var(--ink2);margin-top:2px">${s.descricao}</div>` : ''}
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn-sec" style="font-size:11px;padding:6px 12px" onclick="editarSetor('${s.id}','${s.nome}','${s.descricao||''}')">Editar</button>
+                <button class="btn-sec" style="font-size:11px;padding:6px 12px;color:var(--alto);border-color:var(--alto)" onclick="deletarSetor('${s.id}')">Remover</button>
+              </div>
+            </div>
+          `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Nenhum setor cadastrado ainda.</p>'}
+        </div>
+      </div>
+
+      <div class="s-card">
+        <div class="s-titulo" style="margin-bottom:4px">Colaboradores por setor</div>
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:16px">Associe cada colaborador ao seu setor</div>
+        <div id="lista-colab-setores">
+          ${colabs?.length > 0 ? colabs.map(c => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--neutro2)">
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--ink)">${c.nome || 'Colaborador'}</div>
+                <div style="font-size:11px;color:var(--ink2)">${c.cargo || ''}</div>
+              </div>
+              <select onchange="atribuirSetor('${c.id}',this.value)"
+                style="font-family:Inter,sans-serif;font-size:12px;padding:6px 10px;border:1.5px solid var(--neutro2);border-radius:8px;background:var(--branco);color:var(--ink);outline:none;cursor:pointer">
+                <option value="">Sem setor</option>
+                ${setores?.map(s => `<option value="${s.id}" ${c.setor === s.nome ? 'selected' : ''}>${s.nome}</option>`).join('') || ''}
+              </select>
+            </div>
+          `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Nenhum colaborador cadastrado.</p>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal novo setor -->
+    <div id="modal-setor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+      <div style="background:var(--branco);border-radius:16px;padding:32px;width:420px;max-width:90vw">
+        <div class="s-titulo" style="margin-bottom:20px" id="modal-setor-titulo">Novo setor</div>
+        <input type="hidden" id="setor-edit-id">
+        <label class="lbl">Nome do setor</label>
+        <input type="text" class="inp" id="setor-nome" placeholder="Ex: Comercial, Operações, RH...">
+        <label class="lbl">Descrição (opcional)</label>
+        <input type="text" class="inp" id="setor-desc" placeholder="Breve descrição do setor">
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <button class="btn-sec" style="flex:1" onclick="fecharModalSetor()">Cancelar</button>
+          <button class="btn-pri" style="flex:1" onclick="salvarSetor()">Salvar setor</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function abrirModalSetor() {
+  document.getElementById('modal-setor-titulo').textContent = 'Novo setor';
+  document.getElementById('setor-edit-id').value = '';
+  document.getElementById('setor-nome').value = '';
+  document.getElementById('setor-desc').value = '';
+  document.getElementById('modal-setor').style.display = 'flex';
+}
+
+function editarSetor(id, nome, desc) {
+  document.getElementById('modal-setor-titulo').textContent = 'Editar setor';
+  document.getElementById('setor-edit-id').value = id;
+  document.getElementById('setor-nome').value = nome;
+  document.getElementById('setor-desc').value = desc;
+  document.getElementById('modal-setor').style.display = 'flex';
+}
+
+function fecharModalSetor() {
+  document.getElementById('modal-setor').style.display = 'none';
+}
+
+async function salvarSetor() {
+  const nome = document.getElementById('setor-nome').value.trim();
+  const desc = document.getElementById('setor-desc').value.trim();
+  const editId = document.getElementById('setor-edit-id').value;
+  if (!nome) { alert('Digite o nome do setor.'); return; }
+
+  if (editId) {
+    await sb.from('setores_empresa').update({ nome, descricao: desc }).eq('id', editId);
+  } else {
+    await sb.from('setores_empresa').insert({ empresa_id: perfil.empresa_id, nome, descricao: desc });
+  }
+  fecharModalSetor();
+  renderSetores();
+}
+
+async function deletarSetor(id) {
+  if (!confirm('Remover este setor?')) return;
+  await sb.from('setores_empresa').update({ ativo: false }).eq('id', id);
+  renderSetores();
+}
+
+async function atribuirSetor(colaboradorId, setorId) {
+  const { data: setor } = setorId
+    ? await sb.from('setores_empresa').select('nome').eq('id', setorId).single()
+    : { data: null };
+  await sb.from('perfis').update({
+    setor_id: setorId || null,
+    setor: setor?.nome || null
+  }).eq('id', colaboradorId);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO: HISTÓRICO E MONITORAMENTO CONTÍNUO
+// ══════════════════════════════════════════════════════════════════
+
+async function salvarSnapshotRelatorio(dados) {
+  if (!perfil?.empresa_id || !dados.totalDiag) return;
+  await sb.from('historico_relatorios').insert({
+    empresa_id:             perfil.empresa_id,
+    total_colaboradores:    dados.totalColab,
+    total_diagnosticos:     dados.totalDiag,
+    percentual_engajamento: dados.adesao,
+    media_score_geral:      dados.mediaScore,
+    score_organizacao:      dados.eixos.find(e => e.key === 'organizacao_trabalho')?.score || null,
+    score_condicoes:        dados.eixos.find(e => e.key === 'condicoes_trabalho')?.score || null,
+    score_relacoes:         dados.eixos.find(e => e.key === 'relacoes_socioprofissionais')?.score || null,
+    score_reconhecimento:   dados.eixos.find(e => e.key === 'reconhecimento_crescimento')?.score || null,
+    score_elo:              dados.eixos.find(e => e.key === 'elo_trabalho_vida')?.score || null,
+    total_baixo:            dados.baixo,
+    total_medio:            dados.medio,
+    total_alto:             dados.alto,
+    resumo_ia:              dados.analise,
+    gerado_por:             perfil.id
+  });
+}
+
+function gerarHtmlHistorico(historico) {
+  if (!historico || historico.length < 2) {
+    return '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:20px 0">O histórico de evolução será exibido a partir do segundo ciclo de diagnóstico.</p>';
+  }
+
+  const atual = historico[0];
+  const anterior = historico[1];
+  const diff = atual.media_score_geral - anterior.media_score_geral;
+  const sinal = diff > 0 ? '+' : '';
+  const cor = diff > 0 ? 'var(--baixo)' : diff < 0 ? 'var(--alto)' : 'var(--ink2)';
+  const icone = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+
+  const eixos = [
+    { key: 'score_organizacao',    label: 'Organização do trabalho' },
+    { key: 'score_condicoes',      label: 'Condições do trabalho' },
+    { key: 'score_relacoes',       label: 'Relações socioprofissionais' },
+    { key: 'score_reconhecimento', label: 'Reconhecimento e crescimento' },
+    { key: 'score_elo',            label: 'Elo trabalho e vida social' }
+  ];
+
+  const eixosHtml = eixos.map(function(e) {
+    const va = atual[e.key];
+    const vb = anterior[e.key];
+    if (va == null || vb == null) return '';
+    const d = va - vb;
+    const c = d > 0 ? 'var(--baixo)' : d < 0 ? 'var(--alto)' : 'var(--ink2)';
+    const s = d > 0 ? '+' : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--neutro2)">
+      <span style="font-size:13px;color:var(--ink)">${e.label}</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:12px;color:var(--ink2)">${vb} → ${va}</span>
+        <span style="font-size:12px;font-weight:600;color:${c}">${s}${d}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const ciclosHtml = historico.slice(0, 6).map(function(h, i) {
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--neutro2)">
+      <span style="font-size:12px;color:var(--ink2)">${new Date(h.created_at).toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' })}</span>
+      <div style="display:flex;gap:16px">
+        <span style="font-size:12px;color:var(--ink)">Score: <strong>${h.media_score_geral || '--'}</strong></span>
+        <span style="font-size:12px;color:var(--ink)">Diag: <strong>${h.total_diagnosticos}</strong></span>
+        <span class="ri-score ${i === 0 ? 'rs-medio' : 'rs-baixo'}" style="font-size:10px">${i === 0 ? 'Atual' : 'Anterior'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="background:var(--verde);border-radius:12px;padding:20px 24px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:6px">Variação desde o último ciclo</div>
+        <div style="font-family:Cormorant Garamond,serif;font-size:32px;font-weight:600;color:var(--neutro)">${sinal}${diff} pontos <span style="font-size:20px">${icone}</span></div>
+        <div style="font-size:13px;color:rgba(246,244,240,.6)">Score atual: ${atual.media_score_geral} · Anterior: ${anterior.media_score_geral}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:rgba(246,244,240,.6)">Ciclos registrados</div>
+        <div style="font-size:28px;font-weight:600;color:var(--neutro)">${historico.length}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:8px">Evolução por eixo</div>
+      ${eixosHtml}
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:8px">Histórico de ciclos</div>
+      ${ciclosHtml}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO: EXPORTAÇÃO PDF
+// ══════════════════════════════════════════════════════════════════
+
+function exportarRelatorioPDF(dados) {
+  const { nomeEmpresa, cnpj, periodo, dataHoje, totalColab, totalDiag,
+          adesao, mediaScore, nivelLabel, baixo, medio, alto,
+          analise, eixos, inventario, planoAcao, historico } = dados;
+
+  const estilos = `
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:'Inter',sans-serif; font-size:13px; color:#1A1A18; background:#fff; }
+      .page { max-width:780px; margin:0 auto; padding:40px; }
+      .header { background:#1B3A34; padding:32px 40px; margin-bottom:32px; }
+      .header-logo { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:600; color:#EFECE6; letter-spacing:-0.5px; }
+      .header-tag { font-size:10px; font-weight:500; letter-spacing:3px; text-transform:uppercase; color:#B0894A; margin-top:4px; }
+      .header-titulo { font-size:18px; color:#EFECE6; margin-top:16px; font-weight:300; }
+      .header-meta { font-size:11px; color:rgba(246,244,240,.6); margin-top:8px; }
+      .nr-badge { display:inline-block; background:rgba(176,137,74,.2); color:#B0894A; font-size:10px; font-weight:600; letter-spacing:1.5px; padding:4px 12px; border-radius:100px; margin-top:8px; }
+      h2 { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:#1B3A34; margin:32px 0 8px; padding-bottom:8px; border-bottom:2px solid #B0894A; }
+      h3 { font-size:14px; font-weight:600; color:#1A1A18; margin:20px 0 8px; }
+      p { font-size:13px; color:#525252; line-height:1.7; margin-bottom:8px; }
+      .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0 24px; }
+      .metric { background:#F5F4F1; border-radius:10px; padding:16px; border-top:3px solid #B0894A; }
+      .metric-val { font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:600; color:#1A1A18; line-height:1; }
+      .metric-lbl { font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#525252; margin-bottom:8px; }
+      .metric-sub { font-size:11px; color:#525252; margin-top:4px; }
+      .analise { background:#1B3A34; border-radius:10px; padding:20px 24px; margin:16px 0 24px; }
+      .analise-lbl { font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#B0894A; margin-bottom:8px; }
+      .analise-txt { font-size:13px; color:rgba(246,244,240,.85); line-height:1.7; }
+      .barra-wrap { margin-bottom:12px; }
+      .barra-header { display:flex; justify-content:space-between; font-size:12px; color:#525252; margin-bottom:5px; }
+      .barra-track { height:6px; background:#E6D7B8; border-radius:100px; }
+      .barra-fill { height:100%; border-radius:100px; }
+      .inv-card { border:1px solid #E6D7B8; border-radius:10px; padding:16px; margin-bottom:12px; }
+      .inv-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+      .inv-eixo { font-size:14px; font-weight:500; color:#1A1A18; }
+      .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:10px; font-weight:600; }
+      .badge-alto { background:#FCEBEB; color:#A32D2D; }
+      .badge-medio { background:#FAEEDA; color:#854F0B; }
+      .badge-baixo { background:#EAF3DE; color:#3B6D11; }
+      .inv-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; font-size:11px; }
+      .inv-item-lbl { color:#525252; margin-bottom:3px; font-weight:600; letter-spacing:0.5px; }
+      .inv-item-val { color:#1A1A18; font-size:12px; }
+      .tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+      .tag { background:#E8F0EE; color:#1B3A34; font-size:10px; font-weight:500; padding:3px 10px; border-radius:100px; }
+      .acao-row { display:grid; grid-template-columns:28px 1fr; gap:12px; padding:12px 0; border-bottom:1px solid #E6D7B8; }
+      .acao-num { width:28px; height:28px; border-radius:50%; background:#E8F0EE; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:#1B3A34; flex-shrink:0; }
+      .acao-titulo { font-size:13px; font-weight:500; color:#1A1A18; margin-bottom:5px; }
+      .acao-meta { font-size:11px; color:#525252; }
+      .evidencia { border:1.5px solid #B0894A; border-radius:10px; padding:20px; margin-top:32px; }
+      .evidencia-titulo { font-size:14px; font-weight:600; color:#1A1A18; margin-bottom:8px; }
+      .evidencia-txt { font-size:12px; color:#525252; line-height:1.7; }
+      .hist-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #E6D7B8; font-size:12px; color:#525252; }
+      .dois-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+      @media print {
+        body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        .no-print { display:none; }
+      }
+    </style>
+  `;
+
+  const metricaNivel = mediaScore >= 70 ? 'Baixo' : mediaScore >= 40 ? 'Médio' : 'Alto';
+  const corNivel = mediaScore >= 70 ? '#2A7A4B' : mediaScore >= 40 ? '#D4860A' : '#C0392B';
+
+  const eixosHtml = eixos.map(function(e) {
+    const cor = e.score >= 70 ? '#2A7A4B' : e.score >= 40 ? '#D4860A' : '#C0392B';
+    return `<div class="barra-wrap">
+      <div class="barra-header"><span>${e.label}</span><span style="font-weight:600;color:${cor}">${e.score}</span></div>
+      <div class="barra-track"><div class="barra-fill" style="width:${e.score}%;background:${cor}"></div></div>
+    </div>`;
+  }).join('');
+
+  const distHtml = [
+    { label: 'Risco baixo', val: baixo, cor: '#2A7A4B' },
+    { label: 'Risco médio', val: medio, cor: '#D4860A' },
+    { label: 'Risco alto',  val: alto,  cor: '#C0392B' }
+  ].map(function(r) {
+    const pct = totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0;
+    return `<div class="barra-wrap">
+      <div class="barra-header"><span>${r.label}</span><span>${r.val} colaboradores (${pct}%)</span></div>
+      <div class="barra-track"><div class="barra-fill" style="width:${pct}%;background:${r.cor}"></div></div>
+    </div>`;
+  }).join('');
+
+  const invHtml = inventario.map(function(inv) {
+    const badgeClass = inv.nivelRisco === 'Crítico' || inv.nivelRisco === 'Alto' ? 'badge-alto' : inv.nivelRisco === 'Moderado' ? 'badge-medio' : 'badge-baixo';
+    return `<div class="inv-card">
+      <div class="inv-header">
+        <span class="inv-eixo">${inv.eixo}</span>
+        <span class="badge ${badgeClass}">${inv.nivelRisco}</span>
+      </div>
+      <div class="inv-grid">
+        <div><div class="inv-item-lbl">GRAVIDADE</div><div class="inv-item-val">${inv.gravidade}</div></div>
+        <div><div class="inv-item-lbl">PROBABILIDADE</div><div class="inv-item-val">${inv.probabilidade}</div></div>
+        <div><div class="inv-item-lbl">IMPACTADOS</div><div class="inv-item-val">${inv.impactados} colab.</div></div>
+      </div>
+      <div class="tags">${inv.riscos.map(r => `<span class="tag">${r}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+
+  const planoHtml = planoAcao.map(function(p, i) {
+    const badgeClass = p.prioridade === 'Urgente' || p.prioridade === 'Alto' ? 'badge-alto' : p.prioridade === 'Médio' ? 'badge-medio' : 'badge-baixo';
+    return `<div class="acao-row">
+      <div class="acao-num">${i+1}</div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div class="acao-titulo">${p.problema}</div>
+          <span class="badge ${badgeClass}" style="font-size:9px">${p.prioridade}</span>
+        </div>
+        <div class="acao-meta">Ação: ${p.acao}</div>
+        <div class="acao-meta">Responsável: <strong>${p.responsavel}</strong> · Prazo: <strong>${p.prazo}</strong> · Status: Pendente</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const histHtml = historico && historico.length > 0 ? historico.slice(0, 6).map(function(h) {
+    return `<div class="hist-row">
+      <span>${new Date(h.created_at).toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' })}</span>
+      <span>Score: <strong>${h.media_score_geral || '--'}</strong></span>
+      <span>Diagnósticos: <strong>${h.total_diagnosticos}</strong></span>
+      <span>Adesão: <strong>${h.percentual_engajamento}%</strong></span>
+    </div>`;
+  }).join('') : '<p style="font-size:12px;color:#525252;padding:12px 0">Histórico disponível a partir do segundo ciclo de diagnóstico.</p>';
+
+  const proxCiclo = (function() {
+    const d = new Date(); d.setMonth(d.getMonth() + 3);
+    return d.toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
+  })();
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Relatório GRO — ${nomeEmpresa}</title>${estilos}</head><body>
+  <div class="header">
+    <div class="header-logo">SENTIO</div>
+    <div class="header-tag">Inteligência Psicossocial Corporativa</div>
+    <div class="header-titulo">Relatório de Gestão de Risco Psicossocial</div>
+    <div class="header-meta">
+      Empresa: <strong style="color:#EFECE6">${nomeEmpresa}</strong> &nbsp;·&nbsp;
+      CNPJ: ${cnpj} &nbsp;·&nbsp;
+      Período: ${periodo} &nbsp;·&nbsp;
+      Emitido em: ${dataHoje}
+    </div>
+    <div class="nr-badge">GRO/PGR · Conforme NR-01 · Riscos Psicossociais</div>
+  </div>
+  <div class="page">
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-lbl">Colaboradores</div>
+        <div class="metric-val">${totalColab}</div>
+        <div class="metric-sub">cadastrados</div>
+      </div>
+      <div class="metric">
+        <div class="metric-lbl">Diagnósticos</div>
+        <div class="metric-val">${totalDiag}</div>
+        <div class="metric-sub">realizados</div>
+      </div>
+      <div class="metric">
+        <div class="metric-lbl">Taxa de adesão</div>
+        <div class="metric-val">${adesao}%</div>
+        <div class="metric-sub">${adesao >= 70 ? 'Meta atingida' : 'Abaixo da meta'}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-lbl">Score geral</div>
+        <div class="metric-val" style="color:${corNivel}">${mediaScore || '--'}</div>
+        <div class="metric-sub">Risco ${metricaNivel}</div>
+      </div>
+    </div>
+
+    <div class="analise">
+      <div class="analise-lbl">Análise interpretativa — GRO/PGR</div>
+      <div class="analise-txt">${analise}</div>
+    </div>
+
+    <h2>Distribuição de risco e scores por eixo</h2>
+    <div class="dois-col" style="margin-top:16px">
+      <div>${distHtml}</div>
+      <div>${eixosHtml}</div>
+    </div>
+
+    <h2>Inventário de riscos psicossociais</h2>
+    <p style="margin-bottom:16px">Identificação, avaliação e classificação conforme GRO/NR-01:</p>
+    ${invHtml}
+
+    <h2>Plano de ação — NR-01</h2>
+    <p style="margin-bottom:16px">Ações obrigatórias com responsável, prazo e status de execução:</p>
+    <div style="border-top:1px solid #E6D7B8">${planoHtml}</div>
+
+    <h2>Histórico de monitoramento</h2>
+    ${histHtml}
+
+    <div class="evidencia">
+      <div style="font-size:22px;margin-bottom:12px">📋</div>
+      <div class="evidencia-titulo">Evidência documental — NR-01</div>
+      <div class="evidencia-txt">
+        Este relatório atesta que <strong>${nomeEmpresa}</strong> realizou a identificação e avaliação
+        dos riscos psicossociais conforme os requisitos do Gerenciamento de Riscos Ocupacionais (GRO)
+        estabelecidos na NR-01. Diagnósticos aplicados: <strong>${totalDiag}</strong>.
+        Período de referência: <strong>${periodo}</strong>.
+        Data de emissão: <strong>${dataHoje}</strong>.
+        Próxima avaliação recomendada: <strong>${proxCiclo}</strong>.
+      </div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid #E6D7B8;display:flex;justify-content:space-between">
+        <div style="font-size:11px;color:#525252">
+          Responsável técnico: ___________________________<br>
+          CRP/CRM: _______________
+        </div>
+        <div style="font-size:11px;color:#525252;text-align:right">
+          Assinatura: ___________________________<br>
+          Data: ${dataHoje}
+        </div>
+      </div>
+    </div>
+  </div>
+  </body></html>`;
+
+  const janela = window.open('', '_blank');
+  janela.document.write(html);
+  janela.document.close();
+  janela.onload = function() { janela.print(); };
 }
 </script>
 </body>
