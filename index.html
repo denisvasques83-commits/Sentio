@@ -114,7 +114,7 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .ia-box{background:var(--verde);border-radius:16px;padding:28px;display:flex;gap:20px;align-items:flex-start;}
 .ia-icon{font-size:28px;flex-shrink:0;}
 .ia-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:8px;}
-.ia-txt{font-size:14px;color:rgba(246,244,240,.8);line-height:1.7;font-style:italic;}
+.ia-txt{font-size:14px;color:rgba(246,244,240,.8);line-height:1.7;}
 .c-welcome{background:var(--verde);border-radius:16px;padding:32px;margin-bottom:24px;position:relative;overflow:hidden;}
 .c-welcome::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(176,137,74,.2) 0%,transparent 70%);border-radius:50%;}
 .c-welcome h2{font-family:'Cormorant Garamond',serif;font-style:normal;font-size:28px;font-weight:600;color:var(--neutro);margin-bottom:8px;position:relative;}
@@ -156,7 +156,7 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .btn-p:disabled{opacity:.4;cursor:not-allowed;}
 .d-resultado{text-align:center;padding:48px 32px;background:var(--branco);border:1.5px solid var(--neutro2);border-radius:20px;}
 .res-icon{font-size:64px;margin-bottom:20px;display:block;}
-.res-titulo{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:28px;font-weight:600;color:var(--ink);margin-bottom:12px;}
+.res-titulo{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--ink);margin-bottom:12px;}
 .res-desc{font-size:14px;color:var(--ink2);font-weight:300;line-height:1.7;max-width:400px;margin:0 auto 24px;}
 .res-nivel{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:100px;font-size:14px;font-weight:600;margin-bottom:28px;}
 .n-baixo{background:rgba(42,122,75,.1);color:var(--baixo);}
@@ -519,7 +519,7 @@ async function renderDashboard() {
           <div class="ri-header"><span class="ri-nome">Risco Alto</span><span class="ri-score rs-alto">${alto} colaboradores</span></div>
           <div class="barra"><div class="bf bf-alto" style="width:${totalDiag?Math.round(alto/totalDiag*100):0}%"></div></div>
         </div>
-        ${totalDiag === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:20px 0;font-style:italic">Nenhum diagnóstico realizado ainda.</p>' : ''}
+        ${totalDiag === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:20px 0;font-style:normal">Nenhum diagnóstico realizado ainda.</p>' : ''}
       </div>
       <div class="s-card" id="alertas-preview">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -549,7 +549,7 @@ async function renderDashboard() {
       el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="s-titulo">Alertas recentes</div><span class="tag-verde">' + alertas.length + ' ativos</span></div><div class="s-sub">Ações recomendadas para o RH</div>' +
         alertas.map(a => '<div class="alerta-item"><div class="a-dot ' + (a.nivel_alerta==='alto'?'d-alto':'d-medio') + '"></div><div><div class="a-titulo">' + a.tipo_alerta + '</div><div class="a-desc">' + a.descricao + '</div><div class="a-data">' + new Date(a.created_at).toLocaleDateString('pt-BR') + '</div></div></div>').join('');
     } else {
-      el.innerHTML = '<div class="s-titulo">Alertas recentes</div><div class="s-sub">Ações recomendadas para o RH</div><p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>';
+      el.innerHTML = '<div class="s-titulo">Alertas recentes</div><div class="s-sub">Ações recomendadas para o RH</div><p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0;font-style:normal">✓ Nenhum alerta ativo no momento.</p>';
     }
   }
 }
@@ -583,7 +583,7 @@ async function renderSessoes(tipo) {
         </div>
         <span class="sess-status ${s.status === 'realizada' ? 'st-re' : 'st-ag'}">${s.status === 'realizada' ? 'Realizada' : 'Agendada'}</span>
       </div>
-    `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0;font-style:italic">Nenhuma sessão agendada ainda.</p>'}
+    `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0;font-style:normal">Nenhuma sessão agendada ainda.</p>'}
   `;
 }
 
@@ -598,7 +598,7 @@ async function renderConteudos() {
         <div class="cont-tempo">⏱ ${c.tempo_estimado || 5} min · ${c.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo'}</div>
       </div>
     </div>
-  `).join('') || '<p style="color:var(--ink2);font-style:italic">Nenhum conteúdo disponível.</p>';
+  `).join('') || '<p style="color:var(--ink2);font-style:normal">Nenhum conteúdo disponível.</p>';
   ['sec-conteudos', 'sec-colab-cont'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = `
@@ -633,48 +633,58 @@ async function renderAlertas() {
           <span class="ri-score ${a.nivel_alerta==='alto'?'rs-alto':a.nivel_alerta==='medio'?'rs-medio':'rs-baixo'}">${a.nivel_alerta}</span>
         </div>
       </div>
-    `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>'}
+    `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0;font-style:normal">✓ Nenhum alerta ativo no momento.</p>'}
   `;
 }
 
 async function renderRelatorio() {
   const empresaId = perfil?.empresa_id;
   const sec = document.getElementById('sec-relatorio');
-  sec.innerHTML = '<div style="margin-bottom:24px"><div class="s-titulo">Relatório interpretativo</div><div style="font-size:12px;color:var(--ink2);margin-top:4px">Gerando relatório...</div></div><div class="loading">Carregando dados...</div>';
-  if (!empresaId) { sec.innerHTML = '<div class="loading">Empresa não identificada.</div>'; return; }
+
+  sec.innerHTML = '<div style="margin-bottom:24px"><div class="s-titulo">Relatório NR-01</div><div style="font-size:12px;color:var(--ink2);margin-top:4px">Carregando dados...</div></div><div class="loading">Aguarde...</div>';
+
+  if (!empresaId) {
+    sec.innerHTML = '<div class="loading">Empresa não identificada.</div>';
+    return;
+  }
 
   const [
     { data: colabs },
     { data: diags },
     { data: alertas }
   ] = await Promise.all([
-    sb.from('perfis').select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador'),
-    sb.from('diagnosticos').select('*').eq('empresa_id', empresaId).eq('status', 'completo'),
+    sb.from('perfis').select('id,nome,setor,cargo').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador'),
+    sb.from('diagnosticos').select('*').eq('empresa_id', empresaId).eq('status', 'completo').order('created_at', { ascending: false }),
     sb.from('alertas_empresa').select('*').eq('empresa_id', empresaId).eq('status', 'ativo')
   ]);
 
-  const totalColab = colabs?.length || 0;
-  const totalDiag = diags?.length || 0;
-  const adesao = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
-  const baixo = diags?.filter(d => d.nivel_risco === 'baixo').length || 0;
-  const medio = diags?.filter(d => d.nivel_risco === 'medio').length || 0;
-  const alto = diags?.filter(d => d.nivel_risco === 'alto').length || 0;
-  const scores = diags?.map(d => d.score_total || 0) || [];
-  const mediaScore = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
-  const nivel = mediaScore >= 70 ? 'baixo' : mediaScore >= 40 ? 'medio' : 'alto';
-  const nivelLabel = nivel === 'baixo' ? 'Baixo' : nivel === 'medio' ? 'Médio' : 'Alto';
-  const corNivel = nivel === 'baixo' ? 'var(--baixo)' : nivel === 'medio' ? 'var(--medio)' : 'var(--alto)';
+  const totalColab  = colabs?.length  || 0;
+  const totalDiag   = diags?.length   || 0;
+  const adesao      = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
+  const baixo       = diags?.filter(d => d.nivel_risco === 'baixo').length  || 0;
+  const medio       = diags?.filter(d => d.nivel_risco === 'medio').length  || 0;
+  const alto        = diags?.filter(d => d.nivel_risco === 'alto').length   || 0;
+  const scoresArr   = diags?.map(d => d.score_total || 0) || [];
+  const mediaScore  = scoresArr.length > 0 ? Math.round(scoresArr.reduce((a,b) => a+b, 0) / scoresArr.length) : 0;
+  const nivel       = mediaScore >= 70 ? 'baixo' : mediaScore >= 40 ? 'medio' : 'alto';
+  const nivelLabel  = nivel === 'baixo' ? 'Baixo' : nivel === 'medio' ? 'Médio' : 'Alto';
+  const corNivel    = nivel === 'baixo' ? 'var(--baixo)' : nivel === 'medio' ? 'var(--medio)' : 'var(--alto)';
+  const dataHoje    = new Date().toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
+  const nomeEmpresa = empresa?.nome_empresa || 'Empresa';
+  const cnpj        = empresa?.cnpj || 'Não informado';
+  const periodo     = new Date().toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
 
+  // ── Scores por eixo ──
   const eixoMap = {
-    organizacao_trabalho:        { label: 'Organização do trabalho',    campo: 'score_organizacao' },
-    condicoes_trabalho:          { label: 'Condições do trabalho',      campo: 'score_condicoes' },
-    relacoes_socioprofissionais: { label: 'Relações socioprofissionais', campo: 'score_relacoes' },
-    reconhecimento_crescimento:  { label: 'Reconhecimento e crescimento',campo: 'score_reconhecimento' },
-    elo_trabalho_vida:           { label: 'Elo trabalho e vida social',  campo: 'score_elo' }
+    organizacao_trabalho:        { label: 'Organização do trabalho',     campo: 'score_organizacao' },
+    condicoes_trabalho:          { label: 'Condições do trabalho',       campo: 'score_condicoes' },
+    relacoes_socioprofissionais: { label: 'Relações socioprofissionais',  campo: 'score_relacoes' },
+    reconhecimento_crescimento:  { label: 'Reconhecimento e crescimento', campo: 'score_reconhecimento' },
+    elo_trabalho_vida:           { label: 'Elo trabalho e vida social',   campo: 'score_elo' }
   };
 
   const eixos = Object.entries(eixoMap).map(function(entry) {
-    const key = entry[0];
+    const key  = entry[0];
     const info = entry[1];
     const vals = diags ? diags.map(function(d) { return d[info.campo]; }).filter(function(v) { return v != null; }) : [];
     const score = vals.length > 0 ? Math.round(vals.reduce(function(a,b) { return a+b; }, 0) / vals.length) : null;
@@ -684,140 +694,336 @@ async function renderRelatorio() {
   const eixoCritico  = eixos.length > 0 ? eixos.reduce(function(a,b) { return a.score < b.score ? a : b; }) : null;
   const eixoPositivo = eixos.length > 0 ? eixos.reduce(function(a,b) { return a.score > b.score ? a : b; }) : null;
 
-  var resumo = '';
-  if (totalDiag === 0) {
-    resumo = 'Nenhum diagnóstico foi realizado ainda. Convide seus colaboradores para responderem o questionário psicossocial — os resultados permitirão identificar pontos de atenção e gerar recomendações personalizadas para a empresa.';
-  } else {
-    resumo = 'A empresa apresenta índice geral de risco <strong style="color:' + corNivel + '">' + nivelLabel + ' (' + mediaScore + '/100)</strong> com base em ' + totalDiag + ' diagnóstico' + (totalDiag > 1 ? 's' : '') + ' de ' + totalColab + ' colaborador' + (totalColab > 1 ? 'es' : '') + ' — adesão de ' + adesao + '%.';
-    if (alto > 0) resumo += ' <strong>' + alto + ' colaborador' + (alto > 1 ? 'es requerem' : ' requer') + ' atenção imediata</strong> por apresentar risco alto.';
-    if (medio > 0) resumo += ' ' + medio + ' colaborador' + (medio > 1 ? 'es estão' : ' está') + ' em nível médio e devem ser monitorados.';
-    if (eixoCritico) resumo += ' O eixo mais crítico é <strong>"' + eixoCritico.label + '"</strong> (score ' + eixoCritico.score + ').';
-    if (eixoPositivo && eixoPositivo.key !== (eixoCritico ? eixoCritico.key : '')) resumo += ' O ponto mais positivo é <strong>"' + eixoPositivo.label + '"</strong> (score ' + eixoPositivo.score + ').';
-    if (adesao < 50) resumo += ' A taxa de adesão de ' + adesao + '% está abaixo do recomendado.';
-    else if (adesao >= 70) resumo += ' A taxa de adesão de ' + adesao + '% está dentro da meta.';
-  }
-
-  var recs = [];
-  if (alto > 0) recs.push({ texto: 'Agendar acompanhamento psicológico urgente para os ' + alto + ' colaborador' + (alto > 1 ? 'es' : '') + ' com risco alto identificados.', prazo: 'Esta semana' });
-  if (adesao < 70) recs.push({ texto: 'Aumentar a taxa de adesão ao diagnóstico (' + adesao + '% atual → meta 70%) com comunicação interna reforçando o sigilo e os benefícios.', prazo: 'Próximas 2 semanas' });
-  if (medio > 0) recs.push({ texto: 'Monitorar os ' + medio + ' colaborador' + (medio > 1 ? 'es' : '') + ' em risco médio — reaplicar diagnóstico em 30 dias para verificar evolução.', prazo: 'Este mês' });
-  if (eixoCritico && eixoCritico.score < 60) recs.push({ texto: 'Criar programa focado em "' + eixoCritico.label + '" (score ' + eixoCritico.score + ') — o eixo mais crítico. Considere workshops ou rodas de conversa.', prazo: 'Este mês' });
-  if (totalDiag === 0) recs.push({ texto: 'Lançar campanha interna de sensibilização para que os colaboradores realizem o diagnóstico psicossocial.', prazo: 'Imediato' });
-  if (recs.length === 0) recs.push({ texto: 'Manter acompanhamento periódico e incentivar novos diagnósticos para monitorar a evolução da saúde psicossocial da equipe.', prazo: 'Mensal' });
-
-  var acoes = [];
-  if (totalDiag < totalColab) acoes.push('Convidar os ' + (totalColab - totalDiag) + ' colaborador' + ((totalColab - totalDiag) > 1 ? 'es que ainda não realizaram' : ' que ainda não realizou') + ' o diagnóstico.');
-  else acoes.push('Reaplicar o diagnóstico para monitorar evolução mensal.');
-  if (alto > 0) acoes.push('Iniciar acompanhamento individual dos ' + alto + ' caso' + (alto > 1 ? 's' : '') + ' críticos com o psicólogo parceiro.');
-  else acoes.push('Manter canais abertos para sessões voluntárias de apoio psicológico.');
-  acoes.push('Compartilhar resultados agregados com a liderança e alinhar ações.');
-  acoes.push('Disponibilizar novos conteúdos de saúde mental na biblioteca da plataforma.');
-
-  var alertasHtml = '';
-  if (alertas && alertas.length > 0) {
-    alertasHtml = alertas.map(function(a) {
-      return '<div class="alerta-item"><div class="a-dot ' + (a.nivel_alerta === 'alto' ? 'd-alto' : 'd-medio') + '"></div><div><div class="a-titulo">' + a.tipo_alerta + '</div><div class="a-desc">' + a.descricao + '</div>' + (a.recomendado ? '<div style="font-size:11px;color:var(--verde);margin-top:4px;font-weight:500">→ ' + a.recomendado + '</div>' : '') + '<div class="a-data">' + new Date(a.created_at).toLocaleDateString('pt-BR') + '</div></div></div>';
-    }).join('');
-  } else {
-    alertasHtml = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>';
-  }
-
-  var distHtml = [
-    { label: 'Risco baixo', val: baixo, cls: 'bf-baixo', badge: 'rs-baixo' },
-    { label: 'Risco médio', val: medio, cls: 'bf-medio', badge: 'rs-medio' },
-    { label: 'Risco alto',  val: alto,  cls: 'bf-alto',  badge: 'rs-alto'  }
-  ].map(function(r) {
-    return '<div class="risco-item"><div class="ri-header"><span class="ri-nome">' + r.label + '</span><span class="ri-score ' + r.badge + '">' + r.val + ' colab. · ' + (totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0) + '%</span></div><div class="barra"><div class="bf ' + r.cls + '" style="width:' + (totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0) + '%"></div></div></div>';
-  }).join('');
-
-  var eixosHtml = '';
-  if (eixos.length > 0) {
-    eixosHtml = eixos.map(function(e) {
-      var cor = e.score >= 70 ? 'bf-baixo' : e.score >= 40 ? 'bf-medio' : 'bf-alto';
-      var badge = e.score >= 70 ? 'rs-baixo' : e.score >= 40 ? 'rs-medio' : 'rs-alto';
-      return '<div class="risco-item"><div class="ri-header"><span class="ri-nome" style="font-size:12px">' + e.label + '</span><span class="ri-score ' + badge + '">' + e.score + '</span></div><div class="barra"><div class="bf ' + cor + '" style="width:' + e.score + '%"></div></div></div>';
-    }).join('');
-  } else {
-    eixosHtml = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">Dados insuficientes.</p>';
-  }
-
-  var recsHtml = recs.map(function(r, i) {
-    return '<div class="alerta-item"><div style="width:22px;height:22px;border-radius:50%;background:rgba(27,58,52,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde);flex-shrink:0;margin-top:2px">' + (i+1) + '</div><div><div class="a-titulo">' + r.texto + '</div><div style="font-size:11px;color:var(--ink2);margin-top:3px">Prazo sugerido: <strong>' + r.prazo + '</strong></div></div></div>';
-  }).join('');
-
-  var acoesHtml = acoes.map(function(a, i) {
-    return '<div class="alerta-item"><div style="width:22px;height:22px;border-radius:50%;background:rgba(53,84,93,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde2);flex-shrink:0;margin-top:2px">' + (i+1) + '</div><div class="a-titulo" style="font-weight:400">' + a + '</div></div>';
-  }).join('');
-
-  const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
-
-  sec.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">
-      <div>
-        <div class="s-titulo">Relatório de saúde psicossocial</div>
-        <div style="font-size:12px;color:var(--ink2);margin-top:4px">Gerado em ${dataHoje} · ${empresa?.nome_empresa || 'Sua empresa'}</div>
-      </div>
-      <button class="btn-sec" onclick="renderRelatorio()" style="font-size:12px">↻ Atualizar</button>
-    </div>
-    <div class="metrics" style="margin-bottom:24px">
-      <div class="m-card c-dourado"><div class="m-lbl">Colaboradores</div><div class="m-val">${totalColab}</div><div class="m-sub">cadastrados</div></div>
-      <div class="m-card c-azul"><div class="m-lbl">Diagnósticos</div><div class="m-val">${totalDiag}</div><div class="m-sub">realizados</div></div>
-      <div class="m-card c-verde"><div class="m-lbl">Taxa de adesão</div><div class="m-val">${adesao}%</div><div class="m-sub"><span class="trend ${adesao >= 70 ? 't-up' : 't-down'}">${adesao >= 70 ? '✓ Meta atingida' : 'Abaixo da meta'}</span></div></div>
-      <div class="m-card c-amarelo"><div class="m-lbl">Score médio</div><div class="m-val">${mediaScore || '—'}</div><div class="m-sub">índice geral <span class="trend ${nivel === 'baixo' ? 't-up' : nivel === 'medio' ? 't-neu' : 't-down'}">${nivelLabel}</span></div></div>
-    </div>
-    <div class="ia-box" style="margin-bottom:24px">
-      <div class="ia-icon">✦</div>
-      <div>
-        <div class="ia-label">Análise interpretativa automática</div>
-        <div class="ia-txt">${resumo}</div>
-      </div>
-    </div>
-    <div class="secoes" style="margin-bottom:24px">
-      <div class="s-card">
-        <div class="s-titulo">Distribuição de risco</div>
-        <div class="s-sub">Colaboradores por nível de atenção</div>
-        ${distHtml}
-        ${totalDiag === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">Nenhum diagnóstico realizado.</p>' : ''}
-      </div>
-      <div class="s-card">
-        <div class="s-titulo">Score por eixo psicossocial</div>
-        <div class="s-sub">Média dos diagnósticos por dimensão</div>
-        ${eixosHtml}
-      </div>
-    </div>
-    <div class="s-card" style="margin-bottom:24px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <div class="s-titulo">Alertas identificados</div>
-        ${alertas && alertas.length > 0 ? '<span class="tag-dourado">' + alertas.length + ' ativo' + (alertas.length > 1 ? 's' : '') + '</span>' : ''}
-      </div>
-      <div class="s-sub">Gerados automaticamente com base nos diagnósticos</div>
-      ${alertasHtml}
-    </div>
-    <div class="s-card" style="margin-bottom:24px">
-      <div class="s-titulo">Recomendações prioritárias</div>
-      <div class="s-sub">Ordenadas por urgência com base nos dados</div>
-      ${recsHtml}
-    </div>
-    <div class="s-card">
-      <div class="s-titulo">Ações para o próximo mês</div>
-      <div class="s-sub">Checklist prático para o RH</div>
-      ${acoesHtml}
-    </div>
-  `;
+  // ── Inventário de riscos psicossociais (mapeado pelos eixos + scores) ──
+  var inventario = [];
 
   if (totalDiag > 0) {
+    eixos.forEach(function(e) {
+      var riscos = [];
+      var gravidade, probabilidade, nivelRisco;
+
+      if (e.key === 'organizacao_trabalho') {
+        riscos = ['Sobrecarga de trabalho', 'Metas excessivas', 'Jornada excessiva', 'Baixa previsibilidade'];
+      } else if (e.key === 'condicoes_trabalho') {
+        riscos = ['Condições inadequadas', 'Falta de recursos', 'Insegurança no ambiente'];
+      } else if (e.key === 'relacoes_socioprofissionais') {
+        riscos = ['Conflito com liderança', 'Assédio moral/psicológico', 'Comunicação falha', 'Isolamento'];
+      } else if (e.key === 'reconhecimento_crescimento') {
+        riscos = ['Falta de reconhecimento', 'Baixa autonomia', 'Ausência de perspectiva de crescimento'];
+      } else if (e.key === 'elo_trabalho_vida') {
+        riscos = ['Conflito trabalho-família', 'Pressão constante', 'Insegurança psicológica'];
+      }
+
+      if (e.score < 40) {
+        gravidade    = 'Alta';
+        probabilidade = 'Alta';
+        nivelRisco   = 'Crítico';
+      } else if (e.score < 60) {
+        gravidade    = 'Alta';
+        probabilidade = 'Média';
+        nivelRisco   = 'Alto';
+      } else if (e.score < 75) {
+        gravidade    = 'Média';
+        probabilidade = 'Média';
+        nivelRisco   = 'Moderado';
+      } else {
+        gravidade    = 'Baixa';
+        probabilidade = 'Baixa';
+        nivelRisco   = 'Baixo';
+      }
+
+      inventario.push({
+        eixo:         e.label,
+        riscos:       riscos,
+        score:        e.score,
+        gravidade:    gravidade,
+        probabilidade: probabilidade,
+        nivelRisco:   nivelRisco,
+        impactados:   totalDiag
+      });
+    });
+  }
+
+  // ── Plano de ação gerado automaticamente ──
+  var planoAcao = [];
+
+  if (alto > 0) {
+    planoAcao.push({
+      problema:    'Colaboradores com risco alto identificados (' + alto + ')',
+      acao:        'Agendar acompanhamento psicológico individual e sigiloso',
+      responsavel: 'RH / Gestor de pessoas',
+      prazo:       '7 dias',
+      prioridade:  'Urgente'
+    });
+  }
+
+  if (eixoCritico && eixoCritico.score < 50) {
+    planoAcao.push({
+      problema:    'Eixo crítico: ' + eixoCritico.label + ' (score ' + eixoCritico.score + ')',
+      acao:        'Realizar roda de conversa com equipes afetadas e revisar práticas de gestão',
+      responsavel: 'RH / Liderança',
+      prazo:       '15 dias',
+      prioridade:  'Alto'
+    });
+  }
+
+  if (adesao < 70) {
+    planoAcao.push({
+      problema:    'Taxa de adesão ao diagnóstico abaixo da meta (' + adesao + '%)',
+      acao:        'Lançar campanha interna reforçando sigilo e benefícios do diagnóstico',
+      responsavel: 'RH / Comunicação',
+      prazo:       '15 dias',
+      prioridade:  'Médio'
+    });
+  }
+
+  if (medio > 0) {
+    planoAcao.push({
+      problema:    'Colaboradores em risco médio (' + medio + ')',
+      acao:        'Monitorar evolução e reaplicar diagnóstico em 30 dias',
+      responsavel: 'RH',
+      prazo:       '30 dias',
+      prioridade:  'Médio'
+    });
+  }
+
+  planoAcao.push({
+    problema:    'Ciclo de monitoramento contínuo',
+    acao:        'Reaplicar diagnóstico psicossocial e atualizar inventário de riscos',
+    responsavel: 'RH',
+    prazo:       '90 dias',
+    prioridade:  'Programado'
+  });
+
+  // ── Análise interpretativa ──
+  var analise = '';
+  if (totalDiag === 0) {
+    analise = 'Nenhum diagnóstico foi realizado até o momento. Para iniciar o processo de Gestão de Risco Ocupacional (GRO) conforme a NR-01, convide os colaboradores para responderem o questionário psicossocial. Os dados coletados permitirão identificar, avaliar e tratar os riscos psicossociais da empresa.';
+  } else {
+    analise = nomeEmpresa + ' apresenta índice geral de risco ' + nivelLabel + ' (' + mediaScore + '/100) com base em ' + totalDiag + ' diagnóstico' + (totalDiag > 1 ? 's' : '') + ' realizados de um total de ' + totalColab + ' colaborador' + (totalColab > 1 ? 'es' : '') + ' — taxa de adesão de ' + adesao + '%.';
+    if (alto > 0) { analise += ' ' + alto + ' colaborador' + (alto > 1 ? 'es apresentam' : ' apresenta') + ' risco alto e requer' + (alto > 1 ? 'em' : '') + ' atenção imediata do setor de RH.'; }
+    if (eixoCritico) { analise += ' O eixo mais crítico é "' + eixoCritico.label + '" com score de ' + eixoCritico.score + ', indicando necessidade de intervenção estruturada nessa dimensão.'; }
+    if (eixoPositivo && eixoCritico && eixoPositivo.key !== eixoCritico.key) { analise += ' O eixo com melhor desempenho é "' + eixoPositivo.label + '" (score ' + eixoPositivo.score + ').'; }
+    if (adesao < 50) { analise += ' A taxa de adesão de ' + adesao + '% está abaixo do mínimo recomendado — ampliar a participação é essencial para representatividade da avaliação.'; }
+    else if (adesao >= 70) { analise += ' A taxa de adesão de ' + adesao + '% está dentro da meta de 70%, garantindo representatividade estatística adequada.'; }
+  }
+
+  // ── Badge de cor por nível de risco ──
+  function badgeRisco(nivel) {
+    if (nivel === 'Crítico') return 'rs-alto';
+    if (nivel === 'Alto')    return 'rs-alto';
+    if (nivel === 'Moderado') return 'rs-medio';
+    return 'rs-baixo';
+  }
+
+  function badgePrioridade(p) {
+    if (p === 'Urgente') return 'rs-alto';
+    if (p === 'Alto')    return 'rs-alto';
+    if (p === 'Médio')   return 'rs-medio';
+    return 'rs-baixo';
+  }
+
+  // ── HTML do inventário ──
+  var inventarioHtml = '';
+  if (inventario.length > 0) {
+    inventarioHtml = inventario.map(function(inv) {
+      return '<div class="s-card" style="margin-bottom:12px;padding:20px 24px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">' +
+          '<div style="font-size:14px;font-weight:500;color:var(--ink)">' + inv.eixo + '</div>' +
+          '<span class="ri-score ' + badgeRisco(inv.nivelRisco) + '">' + inv.nivelRisco + '</span>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">' +
+          '<div><div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:4px">Gravidade</div><div style="font-size:13px;color:var(--ink)">' + inv.gravidade + '</div></div>' +
+          '<div><div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:4px">Probabilidade</div><div style="font-size:13px;color:var(--ink)">' + inv.probabilidade + '</div></div>' +
+          '<div><div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:4px">Impactados</div><div style="font-size:13px;color:var(--ink)">' + inv.impactados + ' colaboradores</div></div>' +
+        '</div>' +
+        '<div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:8px">Riscos identificados</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+          inv.riscos.map(function(r) {
+            return '<span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(27,58,52,.07);color:var(--verde);font-weight:500">' + r + '</span>';
+          }).join('') +
+        '</div>' +
+        '<div style="margin-top:12px">' +
+          '<div class="barra"><div class="bf ' + (inv.score < 40 ? 'bf-alto' : inv.score < 60 ? 'bf-medio' : 'bf-baixo') + '" style="width:' + inv.score + '%"></div></div>' +
+          '<div style="font-size:11px;color:var(--ink2);margin-top:4px">Score do eixo: ' + inv.score + '/100</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } else {
+    inventarioHtml = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Realize diagnósticos para gerar o inventário de riscos.</p>';
+  }
+
+  // ── HTML do plano de ação ──
+  var planoHtml = planoAcao.map(function(p, i) {
+    return '<div style="display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--neutro2)">' +
+      '<div style="width:28px;height:28px;border-radius:50%;background:rgba(27,58,52,.08);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde);flex-shrink:0;margin-top:1px">' + (i+1) + '</div>' +
+      '<div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">' +
+          '<div style="font-size:13px;font-weight:500;color:var(--ink)">' + p.problema + '</div>' +
+          '<span class="ri-score ' + badgePrioridade(p.prioridade) + '">' + p.prioridade + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--ink2);margin-bottom:8px">Ação: ' + p.acao + '</div>' +
+        '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
+          '<div style="font-size:11px;color:var(--ink2)">Responsável: <strong style="color:var(--ink)">' + p.responsavel + '</strong></div>' +
+          '<div style="font-size:11px;color:var(--ink2)">Prazo: <strong style="color:var(--ink)">' + p.prazo + '</strong></div>' +
+          '<div style="font-size:11px;color:var(--ink2)">Status: <strong style="color:var(--medio)">Pendente</strong></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // ── HTML dos eixos ──
+  var eixosHtml = eixos.length > 0 ? eixos.map(function(e) {
+    var cor   = e.score >= 70 ? 'bf-baixo' : e.score >= 40 ? 'bf-medio' : 'bf-alto';
+    var badge = e.score >= 70 ? 'rs-baixo' : e.score >= 40 ? 'rs-medio' : 'rs-alto';
+    return '<div class="risco-item">' +
+      '<div class="ri-header"><span class="ri-nome" style="font-size:12px">' + e.label + '</span><span class="ri-score ' + badge + '">' + e.score + '</span></div>' +
+      '<div class="barra"><div class="bf ' + cor + '" style="width:' + e.score + '%"></div></div>' +
+    '</div>';
+  }).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Dados insuficientes.</p>';
+
+  // ── HTML da distribuição ──
+  var distHtml = [
+    { label: 'Risco baixo', val: baixo,  cls: 'bf-baixo', badge: 'rs-baixo' },
+    { label: 'Risco médio', val: medio,  cls: 'bf-medio', badge: 'rs-medio' },
+    { label: 'Risco alto',  val: alto,   cls: 'bf-alto',  badge: 'rs-alto'  }
+  ].map(function(r) {
+    return '<div class="risco-item">' +
+      '<div class="ri-header"><span class="ri-nome">' + r.label + '</span><span class="ri-score ' + r.badge + '">' + r.val + ' · ' + (totalDiag > 0 ? Math.round(r.val/totalDiag*100) : 0) + '%</span></div>' +
+      '<div class="barra"><div class="bf ' + r.cls + '" style="width:' + (totalDiag > 0 ? Math.round(r.val/totalDiag*100) : 0) + '%"></div></div>' +
+    '</div>';
+  }).join('');
+
+  // ── HTML dos alertas ──
+  var alertasHtml = alertas && alertas.length > 0
+    ? alertas.map(function(a) {
+        return '<div class="alerta-item">' +
+          '<div class="a-dot ' + (a.nivel_alerta === 'alto' ? 'd-alto' : 'd-medio') + '"></div>' +
+          '<div>' +
+            '<div class="a-titulo">' + a.tipo_alerta + '</div>' +
+            '<div class="a-desc">' + a.descricao + '</div>' +
+            (a.recomendado ? '<div style="font-size:11px;color:var(--verde);margin-top:4px;font-weight:500">Ação recomendada: ' + a.recomendado + '</div>' : '') +
+            '<div class="a-data">' + new Date(a.created_at).toLocaleDateString('pt-BR') + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('')
+    : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Nenhum alerta ativo no momento.</p>';
+
+  // ── RENDER FINAL ──
+  sec.innerHTML =
+
+    // Cabeçalho oficial
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">' +
+      '<div>' +
+        '<div class="s-titulo">Relatório de Gestão de Risco Psicossocial</div>' +
+        '<div style="font-size:11px;color:var(--ink2);margin-top:6px;line-height:1.7">' +
+          'Empresa: <strong>' + nomeEmpresa + '</strong> &nbsp;·&nbsp; ' +
+          'CNPJ: ' + cnpj + ' &nbsp;·&nbsp; ' +
+          'Período: ' + periodo + ' &nbsp;·&nbsp; ' +
+          'Emitido em: ' + dataHoje +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--dourado);margin-top:4px;font-weight:500">GRO/PGR · Conforme NR-01 · Riscos Psicossociais</div>' +
+      '</div>' +
+      '<button class="btn-sec" onclick="renderRelatorio()" style="font-size:12px">↻ Atualizar</button>' +
+    '</div>' +
+
+    // Métricas
+    '<div class="metrics" style="margin-bottom:24px">' +
+      '<div class="m-card c-dourado"><div class="m-lbl">Colaboradores</div><div class="m-val">' + totalColab + '</div><div class="m-sub">cadastrados na plataforma</div></div>' +
+      '<div class="m-card c-azul"><div class="m-lbl">Diagnósticos</div><div class="m-val">' + totalDiag + '</div><div class="m-sub">realizados até hoje</div></div>' +
+      '<div class="m-card c-verde"><div class="m-lbl">Taxa de adesão</div><div class="m-val">' + adesao + '%</div><div class="m-sub"><span class="trend ' + (adesao >= 70 ? 't-up' : 't-down') + '">' + (adesao >= 70 ? 'Meta atingida' : 'Abaixo da meta') + '</span></div></div>' +
+      '<div class="m-card c-amarelo"><div class="m-lbl">Índice geral</div><div class="m-val">' + (mediaScore || '—') + '</div><div class="m-sub">risco <span class="trend ' + (nivel === 'baixo' ? 't-up' : nivel === 'medio' ? 't-neu' : 't-down') + '">' + nivelLabel + '</span></div></div>' +
+    '</div>' +
+
+    // Análise interpretativa
+    '<div class="ia-box" style="margin-bottom:24px">' +
+      '<div class="ia-icon">✦</div>' +
+      '<div>' +
+        '<div class="ia-label">Análise interpretativa — GRO/PGR</div>' +
+        '<div class="ia-txt" style="font-style:normal">' + analise + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    // Distribuição + Eixos
+    '<div class="secoes" style="margin-bottom:24px">' +
+      '<div class="s-card">' +
+        '<div class="s-titulo">Distribuição de risco</div>' +
+        '<div class="s-sub">Colaboradores por nível de atenção</div>' +
+        distHtml +
+        (totalDiag === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Nenhum diagnóstico realizado.</p>' : '') +
+      '</div>' +
+      '<div class="s-card">' +
+        '<div class="s-titulo">Score por eixo psicossocial</div>' +
+        '<div class="s-sub">Média dos diagnósticos por dimensão</div>' +
+        eixosHtml +
+      '</div>' +
+    '</div>' +
+
+    // Inventário de riscos
+    '<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">' +
+      '<div>' +
+        '<div class="s-titulo">Inventário de riscos psicossociais</div>' +
+        '<div style="font-size:11px;color:var(--ink2);margin-top:2px">Identificação, avaliação e classificação — conforme GRO/NR-01</div>' +
+      '</div>' +
+      '<span class="tag-dourado">' + inventario.length + ' eixos avaliados</span>' +
+    '</div>' +
+    '<div style="margin-bottom:24px">' + inventarioHtml + '</div>' +
+
+    // Plano de ação
+    '<div class="s-card" style="margin-bottom:24px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+        '<div class="s-titulo">Plano de ação — NR-01</div>' +
+        '<span class="tag-dourado">' + planoAcao.length + ' ações</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--ink2);margin-bottom:16px">Ações obrigatórias com responsável, prazo e status de execução</div>' +
+      '<div style="border-top:1px solid var(--neutro2)">' + planoHtml + '</div>' +
+      '<div style="margin-top:16px;padding:12px 16px;background:rgba(27,58,52,.05);border-radius:8px;font-size:12px;color:var(--ink2)">' +
+        'Evidência documental: este plano de ação foi gerado automaticamente em ' + dataHoje + ' com base nos diagnósticos realizados. ' +
+        'O registro constitui evidência de que a empresa identificou, avaliou e definiu ações para os riscos psicossociais conforme exigido pela NR-01.' +
+      '</div>' +
+    '</div>' +
+
+    // Alertas
+    '<div class="s-card" style="margin-bottom:24px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+        '<div class="s-titulo">Alertas identificados</div>' +
+        (alertas && alertas.length > 0 ? '<span class="tag-dourado">' + alertas.length + ' ativo' + (alertas.length > 1 ? 's' : '') + '</span>' : '') +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--ink2);margin-bottom:8px">Gerados automaticamente com base nos diagnósticos</div>' +
+      alertasHtml +
+    '</div>' +
+
+    // Rodapé de evidência documental
+    '<div class="s-card" style="border:1.5px solid var(--dourado)">' +
+      '<div style="display:flex;gap:16px;align-items:flex-start">' +
+        '<div style="font-size:22px;flex-shrink:0">📋</div>' +
+        '<div>' +
+          '<div class="s-titulo" style="margin-bottom:8px">Evidência documental — NR-01</div>' +
+          '<div style="font-size:13px;color:var(--ink2);line-height:1.7">' +
+            'Este relatório atesta que <strong>' + nomeEmpresa + '</strong> realizou a identificação e avaliação dos riscos psicossociais ' +
+            'conforme os requisitos do Gerenciamento de Riscos Ocupacionais (GRO) estabelecidos na NR-01. ' +
+            'Diagnósticos aplicados: <strong>' + totalDiag + '</strong>. ' +
+            'Período de referência: <strong>' + periodo + '</strong>. ' +
+            'Data de emissão: <strong>' + dataHoje + '</strong>. ' +
+            'Próxima avaliação recomendada: <strong>' + (() => { var d = new Date(); d.setMonth(d.getMonth()+3); return d.toLocaleDateString('pt-BR', { month:'long', year:'numeric' }); })() + '</strong>.' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  // Salvar no banco
+  if (totalDiag > 0) {
     await sb.from('relatorios_empresa').upsert({
-      empresa_id: empresaId,
-      total_colaboradores: totalColab,
-      total_diagnosticos: totalDiag,
-      percentual_engajamento: adesao,
-      media_score_risco: mediaScore,
-      resumo_ia: resumo.replace(/<[^>]+>/g, ''),
-      updated_at: new Date().toISOString()
+      empresa_id:              empresaId,
+      total_colaboradores:     totalColab,
+      total_diagnosticos:      totalDiag,
+      percentual_engajamento:  adesao,
+      media_score_risco:       mediaScore,
+      resumo_ia:               analise,
+      updated_at:              new Date().toISOString()
     }, { onConflict: 'empresa_id' });
   }
 }
-
 async function abrirHomeColaborador() {
   trocarTela('tela-colaborador');
   document.getElementById('nome-colab').textContent = perfil?.nome || 'Colaborador';
