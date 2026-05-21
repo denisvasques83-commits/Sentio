@@ -587,30 +587,492 @@ async function renderSessoes(tipo) {
   `;
 }
 
-async function renderConteudos() {
-  const { data: conteudos } = await sb.from('conteudos').select('*').eq('ativo', true).order('ordem');
-  const html = conteudos?.map(c => `
-    <div class="cont-card">
-      <div class="cont-capa" style="background:linear-gradient(135deg,${c.cor_capa},${c.cor_capa}99)">${c.emoji}</div>
-      <div class="cont-body">
-        <div class="cont-cat">${c.categoria}</div>
-        <div class="cont-titulo">${c.titulo}</div>
-        <div class="cont-tempo">⏱ ${c.tempo_estimado || 5} min · ${c.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo'}</div>
-      </div>
-    </div>
-  `).join('') || '<p style="color:var(--ink2);font-style:normal">Nenhum conteúdo disponível.</p>';
-  ['sec-conteudos', 'sec-colab-cont'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
-        <div class="s-titulo">Biblioteca de conteúdos</div>
-        <span class="tag-dourado">Personalizados</span>
-      </div>
-      <div class="cont-grid">${html}</div>
-    `;
+// ══════════════════════════════════════════════════════════════════
+// MOTOR DE RECOMENDAÇÃO DE TRILHAS — SENTIO
+// Lê os scores do diagnóstico e atribui trilhas automaticamente
+// ══════════════════════════════════════════════════════════════════
+
+function calcularTrilhasRecomendadas(diag) {
+  // diag = objeto com score_organizacao, score_condicoes, score_relacoes,
+  //        score_reconhecimento, score_elo, nivel_risco, score_total
+
+  var trilhas = [];
+
+  // Mapeamento: eixo → trilha(s) por nível de score
+  // Score < 40 = crítico, < 60 = alto, < 75 = moderado, >= 75 = baixo
+
+  // EIXO 1: Organização do trabalho
+  var org = diag.score_organizacao;
+  if (org != null) {
+    if (org < 40) {
+      trilhas.push({
+        id: 2, nome: 'Prevenção de Exaustão Operacional',
+        motivo: 'Organização do trabalho com nível crítico (' + org + '/100)',
+        nivel: 'Crítico', emoji: '🔴', cor: '#C0392B',
+        eixo: 'organizacao_trabalho', score_eixo: org,
+        publico: 'colaborador', modulos: 6
+      });
+    } else if (org < 75) {
+      trilhas.push({
+        id: 1, nome: 'Gestão de Demanda e Previsibilidade',
+        motivo: 'Organização do trabalho com atenção necessária (' + org + '/100)',
+        nivel: org < 60 ? 'Alto' : 'Moderado', emoji: '🟡', cor: '#D4860A',
+        eixo: 'organizacao_trabalho', score_eixo: org,
+        publico: 'colaborador', modulos: 5
+      });
+    }
+  }
+
+  // EIXO 2: Condições do trabalho
+  var cond = diag.score_condicoes;
+  if (cond != null && cond < 75) {
+    trilhas.push({
+      id: 5, nome: 'Clareza Operacional e Redução de Estresse',
+      motivo: 'Condições do trabalho abaixo do esperado (' + cond + '/100)',
+      nivel: cond < 40 ? 'Crítico' : cond < 60 ? 'Alto' : 'Moderado',
+      emoji: cond < 60 ? '🔴' : '🟡', cor: cond < 60 ? '#C0392B' : '#D4860A',
+      eixo: 'condicoes_trabalho', score_eixo: cond,
+      publico: 'colaborador', modulos: 5
+    });
+  }
+
+  // EIXO 3: Relações socioprofissionais
+  var rel = diag.score_relacoes;
+  if (rel != null) {
+    if (rel < 60) {
+      trilhas.push({
+        id: 3, nome: 'Segurança Psicológica no Trabalho',
+        motivo: 'Relações socioprofissionais com risco identificado (' + rel + '/100)',
+        nivel: rel < 40 ? 'Crítico' : 'Alto', emoji: rel < 40 ? '🔴' : '🟠', cor: rel < 40 ? '#C0392B' : '#E67E22',
+        eixo: 'relacoes_socioprofissionais', score_eixo: rel,
+        publico: 'colaborador', modulos: 5
+      });
+    }
+    if (rel < 75) {
+      trilhas.push({
+        id: 6, nome: 'Comunicação Assertiva no Trabalho',
+        motivo: 'Relações interpessoais com oportunidade de melhoria (' + rel + '/100)',
+        nivel: rel < 60 ? 'Alto' : 'Moderado', emoji: '🟡', cor: '#D4860A',
+        eixo: 'relacoes_socioprofissionais', score_eixo: rel,
+        publico: 'colaborador', modulos: 5
+      });
+    }
+  }
+
+  // EIXO 4: Reconhecimento e crescimento
+  var rec = diag.score_reconhecimento;
+  if (rec != null && rec < 75) {
+    trilhas.push({
+      id: 9, nome: 'Reconhecimento, Autonomia e Propósito',
+      motivo: 'Baixo reconhecimento e autonomia percebidos (' + rec + '/100)',
+      nivel: rec < 40 ? 'Crítico' : rec < 60 ? 'Alto' : 'Moderado',
+      emoji: rec < 60 ? '🔴' : '🟡', cor: rec < 60 ? '#C0392B' : '#D4860A',
+      eixo: 'reconhecimento_crescimento', score_eixo: rec,
+      publico: 'lider_rh', modulos: 5
+    });
+  }
+
+  // EIXO 5: Elo trabalho e vida social
+  var elo = diag.score_elo;
+  if (elo != null) {
+    if (elo < 60) {
+      trilhas.push({
+        id: 7, nome: 'Regulação Emocional no Ambiente de Trabalho',
+        motivo: 'Elo trabalho-vida social comprometido (' + elo + '/100)',
+        nivel: elo < 40 ? 'Crítico' : 'Alto', emoji: elo < 40 ? '🔴' : '🟠', cor: elo < 40 ? '#C0392B' : '#E67E22',
+        eixo: 'elo_trabalho_vida', score_eixo: elo,
+        publico: 'colaborador', modulos: 5
+      });
+    }
+    if (elo < 75) {
+      trilhas.push({
+        id: 8, nome: 'Gestão de Rotina e Previsibilidade',
+        motivo: 'Previsibilidade e equilíbrio trabalho-vida com atenção (' + elo + '/100)',
+        nivel: elo < 60 ? 'Alto' : 'Moderado', emoji: '🟡', cor: '#D4860A',
+        eixo: 'elo_trabalho_vida', score_eixo: elo,
+        publico: 'colaborador', modulos: 5
+      });
+    }
+  }
+
+  // Deduplicar por id (pode haver duplicata se múltiplos eixos apontam para mesma trilha)
+  var visto = {};
+  trilhas = trilhas.filter(function(t) {
+    if (visto[t.id]) return false;
+    visto[t.id] = true;
+    return true;
   });
+
+  // Ordenar: crítico primeiro, depois por score_eixo crescente (pior primeiro)
+  var ordem = { 'Crítico': 0, 'Alto': 1, 'Moderado': 2, 'Baixo': 3 };
+  trilhas.sort(function(a, b) {
+    if (ordem[a.nivel] !== ordem[b.nivel]) return ordem[a.nivel] - ordem[b.nivel];
+    return a.score_eixo - b.score_eixo;
+  });
+
+  // Máximo 4 trilhas recomendadas
+  return trilhas.slice(0, 4);
 }
 
+// ── Renderizar a tela de Conteúdos do Colaborador ──────────────────
+async function renderConteudos() {
+  var colaboradorId = perfil?.id;
+  var empresaId = perfil?.empresa_id;
+
+  // Buscar diagnóstico mais recente do colaborador
+  var diagRecente = null;
+  if (colaboradorId) {
+    var { data: diagData } = await sb.from('diagnosticos')
+      .select('*')
+      .eq('colaborador_id', colaboradorId)
+      .eq('status', 'completo')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    diagRecente = diagData;
+  }
+
+  // Buscar progresso das trilhas (módulos concluídos)
+  var progressoMap = {};
+  if (colaboradorId) {
+    var { data: progData } = await sb.from('progresso_trilhas')
+      .select('*')
+      .eq('colaborador_id', colaboradorId);
+    if (progData) {
+      progData.forEach(function(p) { progressoMap[p.trilha_id] = p; });
+    }
+  }
+
+  // Buscar todos os conteúdos disponíveis
+  var { data: conteudos } = await sb.from('conteudos')
+    .select('*')
+    .eq('ativo', true)
+    .order('trilha_id')
+    .order('modulo_ordem');
+
+  // Calcular trilhas recomendadas
+  var trilhasRec = diagRecente ? calcularTrilhasRecomendadas(diagRecente) : [];
+
+  // ── HTML da seção do colaborador ──────────────────────────────────
+  var htmlColab = '';
+
+  if (trilhasRec.length > 0) {
+    // Cabeçalho com diagnóstico
+    var dataD = diagRecente.created_at
+      ? new Date(diagRecente.created_at).toLocaleDateString('pt-BR', { day:'numeric', month:'long' })
+      : '';
+
+    htmlColab += '<div style="background:var(--verde);border-radius:16px;padding:24px 28px;margin-bottom:24px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">' +
+        '<div>' +
+          '<div style="font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:6px">Trilhas recomendadas pelo diagnóstico</div>' +
+          '<div style="font-family:Cormorant Garamond,serif;font-size:22px;font-weight:600;color:var(--neutro)">Com base no seu perfil de ' + dataD + '</div>' +
+          '<div style="font-size:13px;color:rgba(246,244,240,.6);margin-top:4px">Score geral: ' + (diagRecente.score_total || '--') + '/100 · Nível: ' + (diagRecente.nivel_risco === 'baixo' ? 'Baixo' : diagRecente.nivel_risco === 'medio' ? 'Médio' : 'Alto') + '</div>' +
+        '</div>' +
+        '<button class="btn-sec" style="font-size:12px;color:var(--neutro);border-color:rgba(255,255,255,.2)" onclick="navegarColab(\'diagnostico\',null)">Refazer diagnóstico</button>' +
+      '</div>' +
+    '</div>';
+
+    // Cards de trilhas recomendadas
+    htmlColab += '<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">' +
+      '<div class="s-titulo">Suas trilhas recomendadas</div>' +
+      '<span class="tag-dourado">' + trilhasRec.length + ' trilha' + (trilhasRec.length > 1 ? 's' : '') + '</span>' +
+    '</div>';
+    htmlColab += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px">';
+
+    trilhasRec.forEach(function(t, i) {
+      var prog = progressoMap[t.id];
+      var modConc = prog ? (prog.modulos_concluidos || 0) : 0;
+      var pct = Math.round((modConc / t.modulos) * 100);
+      var corBadge = t.nivel === 'Crítico' ? 'rs-alto' : t.nivel === 'Alto' ? 'rs-alto' : 'rs-medio';
+      var iniciada = modConc > 0;
+      var concluida = pct >= 100;
+
+      htmlColab += '<div class="s-card" style="cursor:pointer;transition:all .2s" onclick="abrirTrilha(' + t.id + ',' + JSON.stringify(t).replace(/"/g, '&quot;') + ')">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+          '<div style="font-size:26px">' + t.emoji + '</div>' +
+          '<span class="ri-score ' + corBadge + '" style="font-size:10px">' + t.nivel + '</span>' +
+        '</div>' +
+        '<div style="font-size:14px;font-weight:500;color:var(--ink);margin-bottom:6px;line-height:1.4">' + t.nome + '</div>' +
+        '<div style="font-size:11px;color:var(--ink2);margin-bottom:12px;line-height:1.5">' + t.motivo + '</div>' +
+        '<div style="font-size:10px;color:var(--ink2);margin-bottom:5px;display:flex;justify-content:space-between">' +
+          '<span>' + modConc + ' de ' + t.modulos + ' módulos</span>' +
+          '<span style="font-weight:500;color:' + (concluida ? 'var(--baixo)' : 'var(--ink2)') + '">' + (concluida ? '✓ Concluída' : iniciada ? pct + '%' : 'Iniciar') + '</span>' +
+        '</div>' +
+        '<div class="barra"><div class="bf ' + (concluida ? 'bf-baixo' : 'bf-medio') + '" style="width:' + pct + '%"></div></div>' +
+      '</div>';
+    });
+
+    htmlColab += '</div>';
+  } else {
+    // Sem diagnóstico ainda
+    htmlColab += '<div style="background:var(--verde);border-radius:16px;padding:28px;margin-bottom:24px;text-align:center">' +
+      '<div style="font-size:32px;margin-bottom:12px">📋</div>' +
+      '<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:600;color:var(--neutro);margin-bottom:8px">Complete o diagnóstico para receber suas trilhas</div>' +
+      '<div style="font-size:13px;color:rgba(246,244,240,.6);margin-bottom:16px">O sistema identifica os riscos do seu perfil e recomenda as trilhas mais relevantes para você.</div>' +
+      '<button class="btn-p" onclick="navegarColab(\'diagnostico\',null)">Fazer diagnóstico agora →</button>' +
+    '</div>';
+  }
+
+  // Biblioteca completa
+  var trilhasUnicas = {};
+  if (conteudos) {
+    conteudos.forEach(function(c) {
+      var tid = c.trilha_id || 0;
+      if (!trilhasUnicas[tid]) trilhasUnicas[tid] = { nome: c.categoria || 'Geral', conteudos: [], cor: c.cor_capa || '#1B3A34', emoji: c.emoji || '📋' };
+      trilhasUnicas[tid].conteudos.push(c);
+    });
+  }
+
+  var bibHtml = '';
+  Object.keys(trilhasUnicas).forEach(function(tid) {
+    var tg = trilhasUnicas[tid];
+    var isRec = trilhasRec.some(function(r) { return r.id == tid; });
+    bibHtml += '<div style="margin-bottom:24px">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+        '<div style="font-size:20px">' + tg.emoji + '</div>' +
+        '<div style="font-size:14px;font-weight:500;color:var(--ink)">' + tg.nome + '</div>' +
+        (isRec ? '<span class="tag-verde">Recomendada</span>' : '') +
+      '</div>' +
+      '<div class="cont-grid">' +
+        tg.conteudos.map(function(c) {
+          return '<div class="cont-card" onclick="abrirModulo(' + c.id + ')">' +
+            '<div class="cont-capa" style="background:linear-gradient(135deg,' + (c.cor_capa || '#1B3A34') + ',' + (c.cor_capa || '#1B3A34') + '99)">' + (c.emoji || '📋') + '</div>' +
+            '<div class="cont-body">' +
+              '<div class="cont-cat">' + (c.categoria || '') + '</div>' +
+              '<div class="cont-titulo">' + c.titulo + '</div>' +
+              '<div class="cont-tempo">⏱ ' + (c.tempo_estimado || 5) + ' min · ' + (c.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  });
+
+  if (!bibHtml) {
+    bibHtml = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0">Nenhum conteúdo disponível no momento.</p>';
+  }
+
+  htmlColab += '<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">' +
+    '<div class="s-titulo">Biblioteca completa</div>' +
+    '<span style="font-size:12px;color:var(--ink2)">' + (conteudos?.length || 0) + ' módulos disponíveis</span>' +
+  '</div>' +
+  bibHtml;
+
+  var elColab = document.getElementById('sec-colab-cont');
+  if (elColab) {
+    elColab.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">' +
+      '<div><div class="s-titulo">Conteúdos</div><div style="font-size:12px;color:var(--ink2);margin-top:4px">Trilhas e módulos personalizados para você</div></div>' +
+    '</div>' + htmlColab;
+  }
+
+  // ── HTML da seção do GESTOR (visão da empresa) ────────────────────
+  var htmlGestor = '<div style="margin-bottom:24px">' +
+    '<div class="s-titulo">Trilhas disponíveis na plataforma</div>' +
+    '<div style="font-size:12px;color:var(--ink2);margin-top:4px">Conteúdo atribuído automaticamente com base nos diagnósticos</div>' +
+  '</div>';
+
+  // Cards das 9 trilhas para o gestor
+  var nomesTrilhas = [
+    { id:1, nome:'Gestão de Demanda', emoji:'📋', desc:'Sobrecarga moderada', modulos:5 },
+    { id:2, nome:'Prevenção de Exaustão', emoji:'🔴', desc:'Sobrecarga alta', modulos:6 },
+    { id:3, nome:'Segurança Psicológica', emoji:'🛡️', desc:'Baixa segurança', modulos:5 },
+    { id:4, nome:'Liderança sob Pressão', emoji:'💼', desc:'Conflito com liderança', modulos:5 },
+    { id:5, nome:'Clareza Operacional', emoji:'⚙️', desc:'Desorganização', modulos:5 },
+    { id:6, nome:'Comunicação Assertiva', emoji:'💬', desc:'Conflito interpessoal', modulos:5 },
+    { id:7, nome:'Regulação Emocional', emoji:'🧘', desc:'Ansiedade/reatividade', modulos:5 },
+    { id:8, nome:'Gestão de Rotina', emoji:'📅', desc:'Baixa previsibilidade', modulos:5 },
+    { id:9, nome:'Reconhecimento e Autonomia', emoji:'⭐', desc:'Falta de reconhecimento', modulos:5 }
+  ];
+
+  // Contar quantos colaboradores estão em cada trilha (pelo progresso)
+  var { data: todosProg } = await sb.from('progresso_trilhas').select('trilha_id').eq('empresa_id', empresaId);
+  var contTrilha = {};
+  if (todosProg) {
+    todosProg.forEach(function(p) {
+      contTrilha[p.trilha_id] = (contTrilha[p.trilha_id] || 0) + 1;
+    });
+  }
+
+  htmlGestor += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">';
+  nomesTrilhas.forEach(function(t) {
+    var qtd = contTrilha[t.id] || 0;
+    htmlGestor += '<div class="s-card" style="padding:18px 20px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<span style="font-size:22px">' + t.emoji + '</span>' +
+        (qtd > 0 ? '<span class="tag-verde">' + qtd + ' em andamento</span>' : '<span style="font-size:11px;color:var(--ink2)">Nenhum ainda</span>') +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:4px">' + t.nome + '</div>' +
+      '<div style="font-size:11px;color:var(--ink2);margin-bottom:10px">' + t.desc + ' · ' + t.modulos + ' módulos</div>' +
+      '<div class="barra"><div class="bf bf-baixo" style="width:' + (qtd > 0 ? Math.min(qtd * 10, 100) : 0) + '%"></div></div>' +
+    '</div>';
+  });
+  htmlGestor += '</div>';
+
+  if (conteudos && conteudos.length > 0) {
+    htmlGestor += '<div class="s-titulo" style="margin-bottom:16px">Todos os módulos</div>';
+    htmlGestor += '<div class="cont-grid">';
+    conteudos.forEach(function(c) {
+      htmlGestor += '<div class="cont-card">' +
+        '<div class="cont-capa" style="background:linear-gradient(135deg,' + (c.cor_capa || '#1B3A34') + ',' + (c.cor_capa || '#1B3A34') + '99)">' + (c.emoji || '📋') + '</div>' +
+        '<div class="cont-body">' +
+          '<div class="cont-cat">' + (c.categoria || '') + '</div>' +
+          '<div class="cont-titulo">' + c.titulo + '</div>' +
+          '<div class="cont-tempo">⏱ ' + (c.tempo_estimado || 5) + ' min · Módulo ' + (c.modulo_ordem || '') + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    htmlGestor += '</div>';
+  }
+
+  var elGestor = document.getElementById('sec-conteudos');
+  if (elGestor) {
+    elGestor.innerHTML = htmlGestor;
+  }
+}
+
+// ── Abrir trilha completa ──────────────────────────────────────────
+async function abrirTrilha(trilhaId, info) {
+  var el = document.getElementById('sec-colab-cont');
+  if (!el) return;
+
+  var { data: modulos } = await sb.from('conteudos')
+    .select('*')
+    .eq('trilha_id', trilhaId)
+    .eq('ativo', true)
+    .order('modulo_ordem');
+
+  var prog = {};
+  if (perfil?.id) {
+    var { data: progData } = await sb.from('progresso_trilhas')
+      .select('*')
+      .eq('colaborador_id', perfil.id)
+      .eq('trilha_id', trilhaId)
+      .single();
+    if (progData) prog = progData;
+  }
+
+  var modConc = prog.modulos_concluidos || 0;
+  var total = modulos?.length || 0;
+  var pct = total > 0 ? Math.round((modConc / total) * 100) : 0;
+  var modulosConcluidos = prog.modulos_ids_concluidos ? JSON.parse(prog.modulos_ids_concluidos) : [];
+
+  var html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">' +
+    '<button class="btn-sec" style="font-size:12px" onclick="renderConteudos()">← Voltar</button>' +
+    '<div><div class="s-titulo">' + info.nome + '</div>' +
+    '<div style="font-size:12px;color:var(--ink2);margin-top:2px">' + info.motivo + '</div></div>' +
+  '</div>' +
+
+  '<div style="background:var(--branco);border:1.5px solid var(--neutro2);border-radius:16px;padding:20px 24px;margin-bottom:24px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<span style="font-size:13px;font-weight:500;color:var(--ink)">Progresso da trilha</span>' +
+      '<span style="font-size:13px;font-weight:600;color:' + (pct >= 100 ? 'var(--baixo)' : 'var(--ink2)') + '">' + modConc + '/' + total + ' módulos · ' + pct + '%</span>' +
+    '</div>' +
+    '<div class="barra" style="height:8px"><div class="bf ' + (pct >= 100 ? 'bf-baixo' : 'bf-medio') + '" style="width:' + pct + '%"></div></div>' +
+    (pct >= 100 ? '<div style="font-size:12px;color:var(--baixo);margin-top:8px;font-weight:500">✓ Trilha concluída</div>' : '') +
+  '</div>';
+
+  if (modulos && modulos.length > 0) {
+    html += '<div style="display:flex;flex-direction:column;gap:12px">';
+    modulos.forEach(function(m, i) {
+      var concluido = modulosConcluidos.includes(m.id);
+      html += '<div class="s-card" style="cursor:pointer" onclick="abrirModuloConteudo(' + m.id + ',' + trilhaId + ')">' +
+        '<div style="display:flex;gap:14px;align-items:flex-start">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:' + (concluido ? 'var(--baixo)' : 'var(--neutro2)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+            '<span style="font-size:13px;color:' + (concluido ? 'white' : 'var(--ink2)') + ';font-weight:600">' + (concluido ? '✓' : (i+1)) + '</span>' +
+          '</div>' +
+          '<div style="flex:1">' +
+            '<div style="font-size:14px;font-weight:500;color:var(--ink);margin-bottom:4px">' + m.titulo + '</div>' +
+            '<div style="font-size:11px;color:var(--ink2)">⏱ ' + (m.tempo_estimado || 5) + ' min · ' + (m.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</div>' +
+          '</div>' +
+          '<span style="font-size:11px;color:' + (concluido ? 'var(--baixo)' : 'var(--dourado)') + ';font-weight:500">' + (concluido ? 'Concluído' : 'Abrir →') + '</span>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0">Módulos desta trilha em breve.</p>';
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Abrir módulo e marcar como concluído ──────────────────────────
+async function abrirModuloConteudo(moduloId, trilhaId) {
+  var el = document.getElementById('sec-colab-cont');
+  if (!el) return;
+
+  var { data: m } = await sb.from('conteudos').select('*').eq('id', moduloId).single();
+  if (!m) return;
+
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">' +
+    '<button class="btn-sec" style="font-size:12px" onclick="abrirTrilha(' + trilhaId + ',{nome:\'' + (m.categoria || '') + '\',motivo:\'\'})">← Voltar à trilha</button>' +
+  '</div>' +
+  '<div class="s-card" style="max-width:680px">' +
+    '<div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dourado);margin-bottom:8px">' + (m.categoria || '') + ' · Módulo ' + (m.modulo_ordem || '') + '</div>' +
+    '<div style="font-family:Cormorant Garamond,serif;font-size:24px;font-weight:600;color:var(--ink);margin-bottom:16px;line-height:1.3">' + m.titulo + '</div>' +
+    '<div style="font-size:13px;color:var(--ink2);margin-bottom:24px;display:flex;gap:16px">' +
+      '<span>⏱ ' + (m.tempo_estimado || 5) + ' min</span>' +
+      '<span>📄 ' + (m.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</span>' +
+    '</div>' +
+    '<div style="font-size:14px;color:var(--ink);line-height:1.8;white-space:pre-line">' + (m.conteudo_texto || 'Conteúdo em breve.') + '</div>' +
+    '<div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--neutro2);text-align:center">' +
+      '<button class="btn-p" onclick="marcarModuloConcluido(' + moduloId + ',' + trilhaId + ')">Marcar como concluído ✓</button>' +
+    '</div>' +
+  '</div>';
+}
+
+// ── Marcar módulo como concluído e atualizar progresso ────────────
+async function marcarModuloConcluido(moduloId, trilhaId) {
+  if (!perfil?.id) return;
+
+  var { data: progAtual } = await sb.from('progresso_trilhas')
+    .select('*')
+    .eq('colaborador_id', perfil.id)
+    .eq('trilha_id', trilhaId)
+    .single();
+
+  var idsConc = progAtual?.modulos_ids_concluidos ? JSON.parse(progAtual.modulos_ids_concluidos) : [];
+
+  if (!idsConc.includes(moduloId)) {
+    idsConc.push(moduloId);
+  }
+
+  var { data: totalMods } = await sb.from('conteudos')
+    .select('id', { count: 'exact' })
+    .eq('trilha_id', trilhaId)
+    .eq('ativo', true);
+
+  var totalCount = totalMods?.length || 0;
+  var concCount = idsConc.length;
+  var concluida = concCount >= totalCount;
+
+  await sb.from('progresso_trilhas').upsert({
+    colaborador_id:         perfil.id,
+    empresa_id:             perfil.empresa_id,
+    trilha_id:              trilhaId,
+    modulos_concluidos:     concCount,
+    modulos_ids_concluidos: JSON.stringify(idsConc),
+    concluida:              concluida,
+    updated_at:             new Date().toISOString()
+  }, { onConflict: 'colaborador_id,trilha_id' });
+
+  if (concluida) {
+    document.getElementById('sec-colab-cont').innerHTML = '<div style="text-align:center;padding:60px 20px">' +
+      '<div style="font-size:56px;margin-bottom:16px">🎯</div>' +
+      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:600;color:var(--ink);margin-bottom:12px">Trilha concluída!</div>' +
+      '<div style="font-size:14px;color:var(--ink2);max-width:400px;margin:0 auto 24px;line-height:1.7">Você concluiu todos os módulos desta trilha. O seu progresso foi registrado como evidência de ação pela empresa.</div>' +
+      '<button class="btn-p" onclick="renderConteudos()">Ver minhas trilhas →</button>' +
+    '</div>';
+  } else {
+    abrirTrilha(trilhaId, { nome: '', motivo: '' });
+  }
+}
+
+function abrirModulo(id) {
+  navegarColab('conteudos', null);
+  setTimeout(function() { abrirModuloConteudo(id, null); }, 100);
+}
 async function renderAlertas() {
   const empresaId = perfil?.empresa_id;
   if (!empresaId) { document.getElementById('sec-alertas').innerHTML = '<div class="loading">Sem alertas.</div>'; return; }
