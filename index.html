@@ -8,27 +8,25 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
-  --verde: #1B3A34;
-  --verde2: #35545D;
-  --salvia: #A6B49A;
-  --areia: #E6D7B8;
-  --dourado: #B0894A;
-  --neutro: #EFECE6;
-  --neutro2: #D8D1C4;
-  --ink: #1A1A18;
-  --ink2: #525252;
-  --branco: #FFFFFF;
-  --baixo: #2A7A4B;
-  --medio: #D4860A;
-  --alto: #C0392B;
-  --sidebar: 240px;
+--verde: #1B3A34;
+--verde2: #35545D;
+--salvia: #A6B49A;
+--areia: #E6D7B8;
+--dourado: #B0894A;
+--neutro: #EFECE6;
+--neutro2: #D8D1C4;
+--ink: #1A1A18;
+--ink2: #525252;
+--branco: #FFFFFF;
+--baixo: #2A7A4B;
+--medio: #D4860A;
+--alto: #C0392B;
+--sidebar: 240px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);color:var(--ink);min-height:100vh;}
 .tela{display:none;min-height:100vh;}
 .tela.ativa{display:flex;}
-
-/* ── LOGIN ── */
 #tela-login{background:var(--verde);align-items:center;justify-content:center;position:relative;overflow:hidden;}
 #tela-login::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(176,137,74,.15) 0%,transparent 70%);border-radius:50%;}
 .login-card{background:var(--neutro);border-radius:20px;padding:52px 48px;width:440px;position:relative;z-index:1;animation:fadeUp .6s ease;}
@@ -46,8 +44,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
 .link-btn{text-align:center;font-size:12px;color:var(--dourado);cursor:pointer;display:block;}
 .erro-msg{background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.2);color:var(--alto);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none;}
-
-/* ── LAYOUT ── */
 .app-layout{display:flex;width:100%;min-height:100vh;}
 .sidebar{width:var(--sidebar);background:var(--verde);min-height:100vh;display:flex;flex-direction:column;padding:32px 0;position:fixed;left:0;top:0;z-index:100;}
 .s-logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--neutro);padding:0 28px;margin-bottom:6px;letter-spacing:-.3px;}
@@ -69,8 +65,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .m-h-esq h1{font-family:'Cormorant Garamond',serif;font-size:24px;font-style:normal;font-weight:600;color:var(--ink);line-height:1;margin-bottom:2px;}
 .m-h-esq p{font-size:12px;color:var(--ink2);font-weight:300;}
 .m-content{padding:32px 40px;}
-
-/* ── CARDS MÉTRICAS ── */
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
 .m-card{background:var(--branco);border:1.5px solid var(--neutro2);border-radius:16px;padding:24px;position:relative;overflow:hidden;transition:all .2s;}
 .m-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06);}
@@ -86,8 +80,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .t-up{background:rgba(42,122,75,.1);color:var(--baixo);}
 .t-down{background:rgba(192,57,43,.1);color:var(--alto);}
 .t-neu{background:rgba(82,82,82,.08);color:var(--ink2);}
-
-/* ── GAUGE ── */
 .gauge{width:80px;height:80px;position:relative;margin-bottom:8px;}
 .gauge svg{transform:rotate(-90deg);}
 .g-bg{fill:none;stroke:var(--neutro2);stroke-width:8;}
@@ -95,8 +87,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .g-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .g-num{font-family:'Cormorant Garamond',serif;font-style:normal;font-size:22px;font-weight:600;color:var(--ink);line-height:1;}
 .g-niv{font-size:9px;font-weight:500;color:var(--medio);letter-spacing:.5px;}
-
-/* ── SEÇÕES ── */
 .secoes{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
 .s-card{background:var(--branco);border:1.5px solid var(--neutro2);border-radius:16px;padding:28px;}
 .s-titulo{font-family:'Cormorant Garamond',serif;font-style:normal;font-size:18px;font-weight:600;color:var(--ink);margin-bottom:4px;}
@@ -125,8 +115,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .ia-icon{font-size:28px;flex-shrink:0;}
 .ia-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:8px;}
 .ia-txt{font-size:14px;color:rgba(246,244,240,.8);line-height:1.7;font-style:italic;}
-
-/* ── COLABORADOR HOME ── */
 .c-welcome{background:var(--verde);border-radius:16px;padding:32px;margin-bottom:24px;position:relative;overflow:hidden;}
 .c-welcome::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(176,137,74,.2) 0%,transparent 70%);border-radius:50%;}
 .c-welcome h2{font-family:'Cormorant Garamond',serif;font-style:normal;font-size:28px;font-weight:600;color:var(--neutro);margin-bottom:8px;position:relative;}
@@ -141,8 +129,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .c-card h3{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px;}
 .c-card p{font-size:12px;color:var(--ink2);font-weight:300;line-height:1.55;}
 .c-cta{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--verde);margin-top:14px;}
-
-/* ── CONTEÚDOS ── */
 .cont-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .cont-card{background:var(--branco);border:1.5px solid var(--neutro2);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s;}
 .cont-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.07);}
@@ -151,8 +137,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .cont-cat{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dourado);margin-bottom:6px;}
 .cont-titulo{font-size:13px;font-weight:500;color:var(--ink);line-height:1.4;margin-bottom:8px;}
 .cont-tempo{font-size:11px;color:var(--ink2);font-weight:300;}
-
-/* ── DIAGNÓSTICO ── */
 .diag-wrap{max-width:680px;margin:0 auto;padding:40px;}
 .d-progress{background:var(--neutro2);height:6px;border-radius:100px;overflow:hidden;margin-bottom:8px;}
 .d-fill{height:100%;background:linear-gradient(90deg,var(--verde),var(--salvia));border-radius:100px;transition:width .4s ease;}
@@ -178,8 +162,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .n-baixo{background:rgba(42,122,75,.1);color:var(--baixo);}
 .n-medio{background:rgba(212,134,10,.1);color:var(--medio);}
 .n-alto{background:rgba(192,57,43,.1);color:var(--alto);}
-
-/* ── SESSÕES ── */
 .sess-card{background:var(--branco);border:1.5px solid var(--neutro2);border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;margin-bottom:12px;transition:all .2s;cursor:pointer;}
 .sess-card:hover{border-color:var(--salvia);transform:translateX(4px);}
 .sess-av{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--neutro2);}
@@ -190,8 +172,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .sess-status{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;}
 .st-ag{background:rgba(53,84,93,.1);color:var(--verde2);}
 .st-re{background:rgba(42,122,75,.1);color:var(--baixo);}
-
-/* ── BTNS ── */
 .btn-pri{padding:12px 28px;background:var(--verde);color:white;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
 .btn-pri:hover{background:var(--verde2);transform:translateY(-1px);}
 .btn-sec{padding:12px 24px;background:transparent;color:var(--ink2);border:1.5px solid var(--neutro2);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
@@ -200,28 +180,23 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 .notif-btn{position:relative;width:36px;height:36px;border-radius:8px;border:1.5px solid var(--neutro2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;background:var(--branco);}
 .notif-badge{position:absolute;top:-4px;right:-4px;width:14px;height:14px;background:var(--alto);border-radius:50%;font-size:8px;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;}
 .loading{display:flex;align-items:center;justify-content:center;height:200px;font-size:14px;color:var(--ink2);}
-
-/* ── LOADING OVERLAY ── */
 .overlay{position:fixed;inset:0;background:var(--verde);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:opacity .5s;}
 .overlay.hide{opacity:0;pointer-events:none;}
 .ov-logo{font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:600;color:var(--neutro);letter-spacing:-1px;margin-bottom:8px;animation:fadeUp .6s ease;}
 .ov-tag{font-size:10px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:var(--dourado);animation:fadeUp .6s ease .1s both;}
 .ov-dot{width:6px;height:6px;background:var(--dourado);border-radius:50%;margin-top:40px;animation:pulse 1.5s ease infinite;}
-
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.6);}}
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
 <div class="overlay" id="overlay">
   <div class="ov-logo">SENTIO</div>
   <div class="ov-tag">Inteligência Psicossocial Corporativa</div>
   <div class="ov-dot"></div>
 </div>
 
-<!-- ── TELA LOGIN ── -->
 <div id="tela-login" class="tela ativa">
   <div class="login-card">
     <div class="login-logo">SENTIO</div>
@@ -241,7 +216,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
   </div>
 </div>
 
-<!-- ── TELA DASHBOARD GESTOR ── -->
 <div id="tela-dashboard" class="tela">
   <div class="app-layout">
     <aside class="sidebar" id="sidebar-gestor">
@@ -280,7 +254,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
           <div class="notif-btn"><span>🔔</span><div class="notif-badge" id="notif-count">0</div></div>
         </div>
       </div>
-      <!-- SEÇÕES -->
       <div id="sec-dashboard" class="m-content"></div>
       <div id="sec-sessoes" class="m-content" style="display:none"></div>
       <div id="sec-conteudos" class="m-content" style="display:none"></div>
@@ -290,7 +263,6 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
   </div>
 </div>
 
-<!-- ── TELA COLABORADOR ── -->
 <div id="tela-colaborador" class="tela">
   <div class="app-layout">
     <aside class="sidebar">
@@ -336,16 +308,10 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
 </div>
 
 <script>
-// ══════════════════════════════
-// SUPABASE CONFIG
-// ══════════════════════════════
 const SUPABASE_URL = 'https://jeuziyxwhggegfwnsbwj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_JpzYbCNwg_WT90baJ2xolg_d58AoSnG';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ══════════════════════════════
-// ESTADO GLOBAL
-// ══════════════════════════════
 let usuario = null;
 let perfil = null;
 let empresa = null;
@@ -355,29 +321,20 @@ let perguntaAtual = 0;
 let respostas = {};
 let diagnosticoId = null;
 
-// ══════════════════════════════
-// INIT
-// ══════════════════════════════
 window.addEventListener('load', async () => {
   setTimeout(() => {
     document.getElementById('overlay').classList.add('hide');
   }, 1800);
-
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     usuario = session.user;
     await carregarPerfil();
   }
-
-  // Data de hoje
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const el = document.getElementById('data-hoje');
   if (el) el.textContent = hoje.charAt(0).toUpperCase() + hoje.slice(1);
 });
 
-// ══════════════════════════════
-// AUTH
-// ══════════════════════════════
 function setTipo(btn, tipo) {
   tipoUsuario = tipo;
   document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('on'));
@@ -389,22 +346,17 @@ async function fazerLogin() {
   const senha = document.getElementById('login-senha').value;
   const btn = document.getElementById('btn-login');
   const erro = document.getElementById('erro-login');
-
   if (!email || !senha) { showErro('Preencha e-mail e senha.'); return; }
-
   btn.disabled = true;
   btn.textContent = 'Entrando...';
   erro.style.display = 'none';
-
   const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
-
   if (error) {
     showErro('E-mail ou senha incorretos.');
     btn.disabled = false;
     btn.textContent = 'Entrar';
     return;
   }
-
   usuario = data.user;
   await carregarPerfil();
 }
@@ -416,21 +368,16 @@ function showErro(msg) {
 }
 
 async function carregarPerfil() {
-  // Bypass RLS usando service role para leitura do perfil
   const { data, error } = await sb.from('perfis')
     .select('*, empresas(*)')
     .eq('id', usuario.id)
     .single();
-
   if (error || !data) {
-    // Perfil não existe — criar perfil demo
     await criarPerfilDemo();
     return;
   }
-
   perfil = data;
   empresa = data.empresas;
-
   if (data.tipo_usuario === 'gestor') {
     await abrirDashboardGestor();
   } else {
@@ -439,9 +386,7 @@ async function carregarPerfil() {
 }
 
 async function criarPerfilDemo() {
-  // Para demo: detecta tipo pelo email ou pelo botão selecionado
   trocarTela('tela-' + (tipoUsuario === 'gestor' ? 'dashboard' : 'colaborador'));
-  renderDemoMode();
 }
 
 async function sair() {
@@ -455,9 +400,6 @@ function mostrarEsqueci() {
   alert('Para redefinir a senha, entre em contato com o administrador da sua empresa.');
 }
 
-// ══════════════════════════════
-// NAVEGAÇÃO
-// ══════════════════════════════
 function trocarTela(id) {
   document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
   document.getElementById(id).classList.add('ativa');
@@ -486,18 +428,12 @@ function navegarColab(secao, el) {
   if (secao === 'diagnostico') iniciarDiagnostico();
 }
 
-// ══════════════════════════════
-// DASHBOARD GESTOR
-// ══════════════════════════════
 async function abrirDashboardGestor() {
   trocarTela('tela-dashboard');
-
-  // Header info
   document.getElementById('nome-gestor').textContent = perfil?.nome || 'Gestor';
   document.getElementById('av-gestor').textContent = (perfil?.nome || 'G')[0].toUpperCase();
   document.getElementById('cargo-gestor').textContent = perfil?.cargo || 'Gestor de RH';
   document.getElementById('subtitulo-gestor').textContent = (empresa?.nome_empresa || 'Sua empresa') + ' · Últimos 30 dias';
-
   await renderDashboard();
   await renderSessoes('gestor');
   await renderConteudos();
@@ -507,17 +443,12 @@ async function abrirDashboardGestor() {
 
 async function renderDashboard() {
   const empresaId = perfil?.empresa_id;
-
-  // Buscar dados reais
   let totalColab = 0, totalDiag = 0, mediaScore = 0, baixo = 0, medio = 0, alto = 0;
-
   if (empresaId) {
     const { data: colabs } = await sb.from('perfis').select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador');
     totalColab = colabs?.length || 0;
-
     const { data: diags } = await sb.from('diagnosticos').select('*').eq('empresa_id', empresaId).eq('status', 'completo');
     totalDiag = diags?.length || 0;
-
     if (diags?.length > 0) {
       const scores = diags.map(d => d.score_total || 0);
       mediaScore = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
@@ -525,19 +456,16 @@ async function renderDashboard() {
       medio = diags.filter(d => d.nivel_risco === 'medio').length;
       alto = diags.filter(d => d.nivel_risco === 'alto').length;
     }
-
     const { data: alertas } = await sb.from('alertas_empresa').select('id').eq('empresa_id', empresaId).eq('status', 'ativo');
     const numAlertas = alertas?.length || 0;
     const badge = document.getElementById('badge-alertas');
     const notif = document.getElementById('notif-count');
     if (numAlertas > 0) { badge.style.display = 'block'; badge.textContent = numAlertas; notif.textContent = numAlertas; }
   }
-
   const engaj = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
   const nivelRisco = mediaScore >= 70 ? 'BAIXO' : mediaScore >= 40 ? 'MÉDIO' : 'ALTO';
   const corGauge = mediaScore >= 70 ? '#2A7A4B' : mediaScore >= 40 ? '#D4860A' : '#C0392B';
   const dashOff = Math.round(201 * (1 - mediaScore/100));
-
   document.getElementById('sec-dashboard').innerHTML = `
     <div class="metrics">
       <div class="m-card c-dourado">
@@ -546,8 +474,7 @@ async function renderDashboard() {
           <div class="gauge">
             <svg width="80" height="80" viewBox="0 0 80 80">
               <circle class="g-bg" cx="40" cy="40" r="32"/>
-              <circle class="g-fill" cx="40" cy="40" r="32" stroke="${corGauge}"
-                stroke-dasharray="201" stroke-dashoffset="${dashOff}"/>
+              <circle class="g-fill" cx="40" cy="40" r="32" stroke="${corGauge}" stroke-dasharray="201" stroke-dashoffset="${dashOff}"/>
             </svg>
             <div class="g-txt">
               <span class="g-num">${mediaScore || '--'}</span>
@@ -609,41 +536,20 @@ async function renderDashboard() {
         <div class="ia-txt" id="ia-resumo">
           ${totalDiag === 0
             ? 'Nenhum diagnóstico realizado ainda. Convide seus colaboradores para responderem o questionário psicossocial para obter análises e recomendações personalizadas.'
-            : `A empresa apresenta índice geral de risco <strong style="color:var(--areia)">${nivelRisco} (${mediaScore}/100)</strong> com base em ${totalDiag} diagnóstico(s) realizado(s). ${alto > 0 ? `<strong style="color:var(--areia)">${alto} colaborador(es)</strong> apresentam risco alto e necessitam de atenção imediata — recomenda-se agendar sessões com psicólogo.` : ''} ${engaj < 70 ? `A taxa de adesão de ${engaj}% está abaixo da meta de 70%. Uma comunicação interna reforçando a importância e o sigilo do diagnóstico pode ajudar.` : `A taxa de adesão de ${engaj}% está dentro da meta.`}`
+            : 'A empresa apresenta índice geral de risco <strong style="color:var(--areia)">' + nivelRisco + ' (' + mediaScore + '/100)</strong> com base em ' + totalDiag + ' diagnóstico(s) realizado(s). ' + (alto > 0 ? '<strong style="color:var(--areia)">' + alto + ' colaborador(es)</strong> apresentam risco alto e necessitam de atenção imediata.' : '') + (engaj < 70 ? ' A taxa de adesão de ' + engaj + '% está abaixo da meta de 70%.' : ' A taxa de adesão de ' + engaj + '% está dentro da meta.')
           }
         </div>
       </div>
     </div>
   `;
-
-  // Carregar alertas no preview
   if (empresaId) {
     const { data: alertas } = await sb.from('alertas_empresa').select('*').eq('empresa_id', empresaId).eq('status', 'ativo').limit(3);
     const el = document.getElementById('alertas-preview');
     if (alertas?.length > 0) {
-      el.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div class="s-titulo">Alertas recentes</div>
-          <span class="tag-verde">${alertas.length} ativos</span>
-        </div>
-        <div class="s-sub">Ações recomendadas para o RH</div>
-        ${alertas.map(a => `
-          <div class="alerta-item">
-            <div class="a-dot ${a.nivel_alerta==='alto'?'d-alto':'d-medio'}"></div>
-            <div>
-              <div class="a-titulo">${a.tipo_alerta}</div>
-              <div class="a-desc">${a.descricao}</div>
-              <div class="a-data">${new Date(a.created_at).toLocaleDateString('pt-BR')}</div>
-            </div>
-          </div>
-        `).join('')}
-      `;
+      el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="s-titulo">Alertas recentes</div><span class="tag-verde">' + alertas.length + ' ativos</span></div><div class="s-sub">Ações recomendadas para o RH</div>' +
+        alertas.map(a => '<div class="alerta-item"><div class="a-dot ' + (a.nivel_alerta==='alto'?'d-alto':'d-medio') + '"></div><div><div class="a-titulo">' + a.tipo_alerta + '</div><div class="a-desc">' + a.descricao + '</div><div class="a-data">' + new Date(a.created_at).toLocaleDateString('pt-BR') + '</div></div></div>').join('');
     } else {
-      el.innerHTML = `
-        <div class="s-titulo">Alertas recentes</div>
-        <div class="s-sub">Ações recomendadas para o RH</div>
-        <p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>
-      `;
+      el.innerHTML = '<div class="s-titulo">Alertas recentes</div><div class="s-sub">Ações recomendadas para o RH</div><p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>';
     }
   }
 }
@@ -652,13 +558,10 @@ async function renderSessoes(tipo) {
   const sec = tipo === 'gestor' ? 'sec-sessoes' : 'sec-colab-sess';
   const empresaId = perfil?.empresa_id;
   const colaboradorId = perfil?.id;
-
   let query = sb.from('sessoes').select('*').order('data_hora', { ascending: false });
   if (tipo === 'gestor' && empresaId) query = query.eq('empresa_id', empresaId);
   if (tipo === 'colaborador' && colaboradorId) query = query.eq('colaborador_id', colaboradorId);
-
   const { data: sessoes } = await query.limit(10);
-
   document.getElementById(sec).innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
       <div>
@@ -686,7 +589,6 @@ async function renderSessoes(tipo) {
 
 async function renderConteudos() {
   const { data: conteudos } = await sb.from('conteudos').select('*').eq('ativo', true).order('ordem');
-
   const html = conteudos?.map(c => `
     <div class="cont-card">
       <div class="cont-capa" style="background:linear-gradient(135deg,${c.cor_capa},${c.cor_capa}99)">${c.emoji}</div>
@@ -697,7 +599,6 @@ async function renderConteudos() {
       </div>
     </div>
   `).join('') || '<p style="color:var(--ink2);font-style:italic">Nenhum conteúdo disponível.</p>';
-
   ['sec-conteudos', 'sec-colab-cont'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = `
@@ -713,9 +614,7 @@ async function renderConteudos() {
 async function renderAlertas() {
   const empresaId = perfil?.empresa_id;
   if (!empresaId) { document.getElementById('sec-alertas').innerHTML = '<div class="loading">Sem alertas.</div>'; return; }
-
   const { data: alertas } = await sb.from('alertas_empresa').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
-
   document.getElementById('sec-alertas').innerHTML = `
     <div style="margin-bottom:24px">
       <div class="s-titulo">Alertas da empresa</div>
@@ -728,7 +627,7 @@ async function renderAlertas() {
           <div style="flex:1">
             <div class="a-titulo">${a.tipo_alerta}</div>
             <div class="a-desc" style="margin-top:6px">${a.descricao}</div>
-            ${a.recomendado ? `<div style="margin-top:8px;font-size:12px;color:var(--verde);font-weight:500">→ ${a.recomendado}</div>` : ''}
+            ${a.recomendado ? '<div style="margin-top:8px;font-size:12px;color:var(--verde);font-weight:500">→ ' + a.recomendado + '</div>' : ''}
             <div class="a-data">${new Date(a.created_at).toLocaleDateString('pt-BR')}</div>
           </div>
           <span class="ri-score ${a.nivel_alerta==='alto'?'rs-alto':a.nivel_alerta==='medio'?'rs-medio':'rs-baixo'}">${a.nivel_alerta}</span>
@@ -741,138 +640,115 @@ async function renderAlertas() {
 async function renderRelatorio() {
   const empresaId = perfil?.empresa_id;
   const sec = document.getElementById('sec-relatorio');
+  sec.innerHTML = '<div style="margin-bottom:24px"><div class="s-titulo">Relatório interpretativo</div><div style="font-size:12px;color:var(--ink2);margin-top:4px">Gerando relatório...</div></div><div class="loading">Carregando dados...</div>';
+  if (!empresaId) { sec.innerHTML = '<div class="loading">Empresa não identificada.</div>'; return; }
 
-  sec.innerHTML = `
-    <div style="margin-bottom:24px">
-      <div class="s-titulo">Relatório interpretativo</div>
-      <div style="font-size:12px;color:var(--ink2);margin-top:4px">Gerado automaticamente · baseado nos dados reais da empresa</div>
-    </div>
-    <div class="loading">Carregando relatório...</div>
-  `;
-
-  if (!empresaId) {
-    sec.innerHTML += '<p style="color:var(--ink2);font-style:italic;text-align:center">Empresa não identificada.</p>';
-    return;
-  }
-
-  // ── Buscar todos os dados do Supabase ──
   const [
     { data: colabs },
     { data: diags },
-    { data: alertas },
-    { data: respostas }
+    { data: alertas }
   ] = await Promise.all([
     sb.from('perfis').select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador'),
     sb.from('diagnosticos').select('*').eq('empresa_id', empresaId).eq('status', 'completo'),
-    sb.from('alertas_empresa').select('*').eq('empresa_id', empresaId).eq('status', 'ativo'),
-    sb.from('respostas_diagnostico').select('*, perguntas_diagnostico(eixo)').eq('empresa_id', empresaId)
+    sb.from('alertas_empresa').select('*').eq('empresa_id', empresaId).eq('status', 'ativo')
   ]);
 
   const totalColab = colabs?.length || 0;
-  const totalDiag  = diags?.length  || 0;
-  const adesao     = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
-
-  // Scores por nível de risco
-  const baixo  = diags?.filter(d => d.nivel_risco === 'baixo').length  || 0;
-  const medio  = diags?.filter(d => d.nivel_risco === 'medio').length  || 0;
-  const alto   = diags?.filter(d => d.nivel_risco === 'alto').length   || 0;
-
-  // Score médio geral
+  const totalDiag = diags?.length || 0;
+  const adesao = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
+  const baixo = diags?.filter(d => d.nivel_risco === 'baixo').length || 0;
+  const medio = diags?.filter(d => d.nivel_risco === 'medio').length || 0;
+  const alto = diags?.filter(d => d.nivel_risco === 'alto').length || 0;
   const scores = diags?.map(d => d.score_total || 0) || [];
-  const mediaScore = scores.length > 0
-    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-    : 0;
+  const mediaScore = scores.length > 0 ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length) : 0;
+  const nivel = mediaScore >= 70 ? 'baixo' : mediaScore >= 40 ? 'medio' : 'alto';
+  const nivelLabel = nivel === 'baixo' ? 'Baixo' : nivel === 'medio' ? 'Médio' : 'Alto';
+  const corNivel = nivel === 'baixo' ? 'var(--baixo)' : nivel === 'medio' ? 'var(--medio)' : 'var(--alto)';
 
-  // Scores médios por eixo
   const eixoMap = {
-    organizacao_trabalho:       { label: 'Organização do trabalho',    campo: 'score_organizacao' },
-    condicoes_trabalho:         { label: 'Condições do trabalho',      campo: 'score_condicoes'   },
-    relacoes_socioprofissionais:{ label: 'Relações socioprofissionais', campo: 'score_relacoes'    },
-    reconhecimento_crescimento: { label: 'Reconhecimento e crescimento',campo: 'score_reconhecimento' },
-    elo_trabalho_vida:          { label: 'Elo trabalho e vida social',  campo: 'score_elo'         }
+    organizacao_trabalho:        { label: 'Organização do trabalho',    campo: 'score_organizacao' },
+    condicoes_trabalho:          { label: 'Condições do trabalho',      campo: 'score_condicoes' },
+    relacoes_socioprofissionais: { label: 'Relações socioprofissionais', campo: 'score_relacoes' },
+    reconhecimento_crescimento:  { label: 'Reconhecimento e crescimento',campo: 'score_reconhecimento' },
+    elo_trabalho_vida:           { label: 'Elo trabalho e vida social',  campo: 'score_elo' }
   };
 
-  const eixos = Object.entries(eixoMap).map(([key, { label, campo }]) => {
-    const vals = diags?.map(d => d[campo]).filter(v => v != null) || [];
-    const score = vals.length > 0
-      ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
-      : null;
-    return { key, label, score };
-  }).filter(e => e.score !== null);
+  const eixos = Object.entries(eixoMap).map(function(entry) {
+    const key = entry[0];
+    const info = entry[1];
+    const vals = diags ? diags.map(function(d) { return d[info.campo]; }).filter(function(v) { return v != null; }) : [];
+    const score = vals.length > 0 ? Math.round(vals.reduce(function(a,b) { return a+b; }, 0) / vals.length) : null;
+    return { key: key, label: info.label, score: score };
+  }).filter(function(e) { return e.score !== null; });
 
-  // Eixo mais crítico e mais positivo
-  const eixoCritico  = eixos.length > 0 ? eixos.reduce((a, b) => a.score < b.score ? a : b) : null;
-  const eixoPositivo = eixos.length > 0 ? eixos.reduce((a, b) => a.score > b.score ? a : b) : null;
+  const eixoCritico  = eixos.length > 0 ? eixos.reduce(function(a,b) { return a.score < b.score ? a : b; }) : null;
+  const eixoPositivo = eixos.length > 0 ? eixos.reduce(function(a,b) { return a.score > b.score ? a : b; }) : null;
 
-  // Nível geral
-  const nivel      = mediaScore >= 70 ? 'baixo' : mediaScore >= 40 ? 'medio' : 'alto';
-  const nivelLabel = nivel === 'baixo' ? 'Baixo' : nivel === 'medio' ? 'Médio' : 'Alto';
-  const corNivel   = nivel === 'baixo' ? 'var(--baixo)' : nivel === 'medio' ? 'var(--medio)' : 'var(--alto)';
-
-  // ── Análise interpretativa (template inteligente) ──
-  let resumo = '';
+  var resumo = '';
   if (totalDiag === 0) {
     resumo = 'Nenhum diagnóstico foi realizado ainda. Convide seus colaboradores para responderem o questionário psicossocial — os resultados permitirão identificar pontos de atenção e gerar recomendações personalizadas para a empresa.';
   } else {
-    resumo = `A empresa apresenta índice geral de risco <strong style="color:${corNivel}">${nivelLabel} (${mediaScore}/100)</strong> com base em ${totalDiag} diagnóstico${totalDiag > 1 ? 's' : ''} de ${totalColab} colaborador${totalColab > 1 ? 'es' : ''} — adesão de ${adesao}%.`;
-    if (alto > 0)
-      resumo += ` <strong>${alto} colaborador${alto > 1 ? 'es requerem' : ' requer'} atenção imediata</strong> por apresentar risco alto — recomenda-se agendar acompanhamento psicológico urgente.`;
-    if (medio > 0)
-      resumo += ` ${medio} colaborador${medio > 1 ? 'es estão' : ' está'} em nível médio e devem ser monitorados nas próximas semanas.`;
-    if (eixoCritico)
-      resumo += ` O eixo mais crítico é <strong>"${eixoCritico.label}"</strong> (score ${eixoCritico.score}), indicando necessidade de intervenção nessa dimensão.`;
-    if (eixoPositivo && eixoPositivo.key !== eixoCritico?.key)
-      resumo += ` O ponto mais positivo da empresa é <strong>"${eixoPositivo.label}"</strong> (score ${eixoPositivo.score}).`;
-    if (adesao < 50)
-      resumo += ` A taxa de adesão de ${adesao}% está abaixo do recomendado — ações de comunicação interna podem aumentar a participação.`;
-    else if (adesao >= 70)
-      resumo += ` A taxa de adesão de ${adesao}% está dentro da meta — bom engajamento da equipe.`;
+    resumo = 'A empresa apresenta índice geral de risco <strong style="color:' + corNivel + '">' + nivelLabel + ' (' + mediaScore + '/100)</strong> com base em ' + totalDiag + ' diagnóstico' + (totalDiag > 1 ? 's' : '') + ' de ' + totalColab + ' colaborador' + (totalColab > 1 ? 'es' : '') + ' — adesão de ' + adesao + '%.';
+    if (alto > 0) resumo += ' <strong>' + alto + ' colaborador' + (alto > 1 ? 'es requerem' : ' requer') + ' atenção imediata</strong> por apresentar risco alto.';
+    if (medio > 0) resumo += ' ' + medio + ' colaborador' + (medio > 1 ? 'es estão' : ' está') + ' em nível médio e devem ser monitorados.';
+    if (eixoCritico) resumo += ' O eixo mais crítico é <strong>"' + eixoCritico.label + '"</strong> (score ' + eixoCritico.score + ').';
+    if (eixoPositivo && eixoPositivo.key !== (eixoCritico ? eixoCritico.key : '')) resumo += ' O ponto mais positivo é <strong>"' + eixoPositivo.label + '"</strong> (score ' + eixoPositivo.score + ').';
+    if (adesao < 50) resumo += ' A taxa de adesão de ' + adesao + '% está abaixo do recomendado.';
+    else if (adesao >= 70) resumo += ' A taxa de adesão de ' + adesao + '% está dentro da meta.';
   }
 
-  // ── Recomendações priorizadas ──
-  const recs = [];
-  if (alto > 0)
-    recs.push({ texto: `Agendar acompanhamento psicológico urgente para os ${alto} colaborador${alto > 1 ? 'es' : ''} com risco alto identificados.`, prazo: 'Esta semana', cor: 'var(--alto)' });
-  if (adesao < 70)
-    recs.push({ texto: `Aumentar a taxa de adesão ao diagnóstico (${adesao}% atual → meta 70%) com comunicação interna reforçando o sigilo e os benefícios.`, prazo: 'Próximas 2 semanas', cor: 'var(--medio)' });
-  if (medio > 0)
-    recs.push({ texto: `Monitorar os ${medio} colaborador${medio > 1 ? 'es' : ''} em risco médio — reaplicar diagnóstico em 30 dias para verificar evolução.`, prazo: 'Este mês', cor: 'var(--medio)' });
-  if (eixoCritico && eixoCritico.score < 60)
-    recs.push({ texto: `Criar programa focado em "${eixoCritico.label}" (score ${eixoCritico.score}) — o eixo mais crítico. Considere workshops, rodas de conversa ou revisão de política interna.`, prazo: 'Este mês', cor: 'var(--medio)' });
-  if (totalDiag === 0)
-    recs.push({ texto: 'Lançar campanha interna de sensibilização para que os colaboradores realizem o diagnóstico psicossocial.', prazo: 'Imediato', cor: 'var(--alto)' });
-  if (recs.length === 0)
-    recs.push({ texto: 'Manter acompanhamento periódico e incentivar novos diagnósticos para monitorar a evolução da saúde psicossocial da equipe.', prazo: 'Mensal', cor: 'var(--baixo)' });
+  var recs = [];
+  if (alto > 0) recs.push({ texto: 'Agendar acompanhamento psicológico urgente para os ' + alto + ' colaborador' + (alto > 1 ? 'es' : '') + ' com risco alto identificados.', prazo: 'Esta semana' });
+  if (adesao < 70) recs.push({ texto: 'Aumentar a taxa de adesão ao diagnóstico (' + adesao + '% atual → meta 70%) com comunicação interna reforçando o sigilo e os benefícios.', prazo: 'Próximas 2 semanas' });
+  if (medio > 0) recs.push({ texto: 'Monitorar os ' + medio + ' colaborador' + (medio > 1 ? 'es' : '') + ' em risco médio — reaplicar diagnóstico em 30 dias para verificar evolução.', prazo: 'Este mês' });
+  if (eixoCritico && eixoCritico.score < 60) recs.push({ texto: 'Criar programa focado em "' + eixoCritico.label + '" (score ' + eixoCritico.score + ') — o eixo mais crítico. Considere workshops ou rodas de conversa.', prazo: 'Este mês' });
+  if (totalDiag === 0) recs.push({ texto: 'Lançar campanha interna de sensibilização para que os colaboradores realizem o diagnóstico psicossocial.', prazo: 'Imediato' });
+  if (recs.length === 0) recs.push({ texto: 'Manter acompanhamento periódico e incentivar novos diagnósticos para monitorar a evolução da saúde psicossocial da equipe.', prazo: 'Mensal' });
 
-  // ── Ações do próximo mês ──
-  const acoes = [];
-  if (totalDiag < totalColab)
-    acoes.push(`Convidar os ${totalColab - totalDiag} colaborador${totalColab - totalDiag > 1 ? 'es que ainda não realizaram' : ' que ainda não realizou'} o diagnóstico.`);
-  else
-    acoes.push('Reaplicar o diagnóstico para monitorar evolução mensal.');
-  if (alto > 0)
-    acoes.push(`Iniciar acompanhamento individual dos ${alto} caso${alto > 1 ? 's' : ''} críticos com o psicólogo parceiro.`);
-  else
-    acoes.push('Manter canais abertos para sessões voluntárias de apoio psicológico.');
+  var acoes = [];
+  if (totalDiag < totalColab) acoes.push('Convidar os ' + (totalColab - totalDiag) + ' colaborador' + ((totalColab - totalDiag) > 1 ? 'es que ainda não realizaram' : ' que ainda não realizou') + ' o diagnóstico.');
+  else acoes.push('Reaplicar o diagnóstico para monitorar evolução mensal.');
+  if (alto > 0) acoes.push('Iniciar acompanhamento individual dos ' + alto + ' caso' + (alto > 1 ? 's' : '') + ' críticos com o psicólogo parceiro.');
+  else acoes.push('Manter canais abertos para sessões voluntárias de apoio psicológico.');
   acoes.push('Compartilhar resultados agregados com a liderança e alinhar ações.');
   acoes.push('Disponibilizar novos conteúdos de saúde mental na biblioteca da plataforma.');
 
-  // ── Alertas do Supabase ──
-  const alertasHtml = alertas?.length > 0
-    ? alertas.map(a => `
-        <div class="alerta-item">
-          <div class="a-dot ${a.nivel_alerta === 'alto' ? 'd-alto' : 'd-medio'}"></div>
-          <div>
-            <div class="a-titulo">${a.tipo_alerta}</div>
-            <div class="a-desc">${a.descricao}</div>
-            ${a.recomendado ? `<div style="font-size:11px;color:var(--verde);margin-top:4px;font-weight:500">→ ${a.recomendado}</div>` : ''}
-            <div class="a-data">${new Date(a.created_at).toLocaleDateString('pt-BR')}</div>
-          </div>
-        </div>
-      `).join('')
-    : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>';
+  var alertasHtml = '';
+  if (alertas && alertas.length > 0) {
+    alertasHtml = alertas.map(function(a) {
+      return '<div class="alerta-item"><div class="a-dot ' + (a.nivel_alerta === 'alto' ? 'd-alto' : 'd-medio') + '"></div><div><div class="a-titulo">' + a.tipo_alerta + '</div><div class="a-desc">' + a.descricao + '</div>' + (a.recomendado ? '<div style="font-size:11px;color:var(--verde);margin-top:4px;font-weight:500">→ ' + a.recomendado + '</div>' : '') + '<div class="a-data">' + new Date(a.created_at).toLocaleDateString('pt-BR') + '</div></div></div>';
+    }).join('');
+  } else {
+    alertasHtml = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">✓ Nenhum alerta ativo no momento.</p>';
+  }
 
-  // ── Renderizar tudo ──
+  var distHtml = [
+    { label: 'Risco baixo', val: baixo, cls: 'bf-baixo', badge: 'rs-baixo' },
+    { label: 'Risco médio', val: medio, cls: 'bf-medio', badge: 'rs-medio' },
+    { label: 'Risco alto',  val: alto,  cls: 'bf-alto',  badge: 'rs-alto'  }
+  ].map(function(r) {
+    return '<div class="risco-item"><div class="ri-header"><span class="ri-nome">' + r.label + '</span><span class="ri-score ' + r.badge + '">' + r.val + ' colab. · ' + (totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0) + '%</span></div><div class="barra"><div class="bf ' + r.cls + '" style="width:' + (totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0) + '%"></div></div></div>';
+  }).join('');
+
+  var eixosHtml = '';
+  if (eixos.length > 0) {
+    eixosHtml = eixos.map(function(e) {
+      var cor = e.score >= 70 ? 'bf-baixo' : e.score >= 40 ? 'bf-medio' : 'bf-alto';
+      var badge = e.score >= 70 ? 'rs-baixo' : e.score >= 40 ? 'rs-medio' : 'rs-alto';
+      return '<div class="risco-item"><div class="ri-header"><span class="ri-nome" style="font-size:12px">' + e.label + '</span><span class="ri-score ' + badge + '">' + e.score + '</span></div><div class="barra"><div class="bf ' + cor + '" style="width:' + e.score + '%"></div></div></div>';
+    }).join('');
+  } else {
+    eixosHtml = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">Dados insuficientes.</p>';
+  }
+
+  var recsHtml = recs.map(function(r, i) {
+    return '<div class="alerta-item"><div style="width:22px;height:22px;border-radius:50%;background:rgba(27,58,52,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde);flex-shrink:0;margin-top:2px">' + (i+1) + '</div><div><div class="a-titulo">' + r.texto + '</div><div style="font-size:11px;color:var(--ink2);margin-top:3px">Prazo sugerido: <strong>' + r.prazo + '</strong></div></div></div>';
+  }).join('');
+
+  var acoesHtml = acoes.map(function(a, i) {
+    return '<div class="alerta-item"><div style="width:22px;height:22px;border-radius:50%;background:rgba(53,84,93,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde2);flex-shrink:0;margin-top:2px">' + (i+1) + '</div><div class="a-titulo" style="font-weight:400">' + a + '</div></div>';
+  }).join('');
+
   const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   sec.innerHTML = `
@@ -883,32 +759,12 @@ async function renderRelatorio() {
       </div>
       <button class="btn-sec" onclick="renderRelatorio()" style="font-size:12px">↻ Atualizar</button>
     </div>
-
-    <!-- Métricas -->
     <div class="metrics" style="margin-bottom:24px">
-      <div class="m-card c-dourado">
-        <div class="m-lbl">Colaboradores</div>
-        <div class="m-val">${totalColab}</div>
-        <div class="m-sub">cadastrados na plataforma</div>
-      </div>
-      <div class="m-card c-azul">
-        <div class="m-lbl">Diagnósticos</div>
-        <div class="m-val">${totalDiag}</div>
-        <div class="m-sub">realizados até hoje</div>
-      </div>
-      <div class="m-card c-verde">
-        <div class="m-lbl">Taxa de adesão</div>
-        <div class="m-val">${adesao}%</div>
-        <div class="m-sub"><span class="trend ${adesao >= 70 ? 't-up' : 't-down'}">${adesao >= 70 ? '✓ Meta atingida' : 'Abaixo da meta'}</span></div>
-      </div>
-      <div class="m-card c-amarelo">
-        <div class="m-lbl">Score médio</div>
-        <div class="m-val">${mediaScore || '—'}</div>
-        <div class="m-sub">índice geral <span class="trend ${nivel === 'baixo' ? 't-up' : nivel === 'medio' ? 't-neu' : 't-down'}">${nivelLabel}</span></div>
-      </div>
+      <div class="m-card c-dourado"><div class="m-lbl">Colaboradores</div><div class="m-val">${totalColab}</div><div class="m-sub">cadastrados</div></div>
+      <div class="m-card c-azul"><div class="m-lbl">Diagnósticos</div><div class="m-val">${totalDiag}</div><div class="m-sub">realizados</div></div>
+      <div class="m-card c-verde"><div class="m-lbl">Taxa de adesão</div><div class="m-val">${adesao}%</div><div class="m-sub"><span class="trend ${adesao >= 70 ? 't-up' : 't-down'}">${adesao >= 70 ? '✓ Meta atingida' : 'Abaixo da meta'}</span></div></div>
+      <div class="m-card c-amarelo"><div class="m-lbl">Score médio</div><div class="m-val">${mediaScore || '—'}</div><div class="m-sub">índice geral <span class="trend ${nivel === 'baixo' ? 't-up' : nivel === 'medio' ? 't-neu' : 't-down'}">${nivelLabel}</span></div></div>
     </div>
-
-    <!-- Análise IA -->
     <div class="ia-box" style="margin-bottom:24px">
       <div class="ia-icon">✦</div>
       <div>
@@ -916,86 +772,39 @@ async function renderRelatorio() {
         <div class="ia-txt">${resumo}</div>
       </div>
     </div>
-
-    <!-- Distribuição + Eixos -->
     <div class="secoes" style="margin-bottom:24px">
       <div class="s-card">
         <div class="s-titulo">Distribuição de risco</div>
         <div class="s-sub">Colaboradores por nível de atenção</div>
-        ${[
-          { label: 'Risco baixo', val: baixo, cls: 'bf-baixo', badge: 'rs-baixo' },
-          { label: 'Risco médio', val: medio, cls: 'bf-medio', badge: 'rs-medio' },
-          { label: 'Risco alto',  val: alto,  cls: 'bf-alto',  badge: 'rs-alto'  }
-        ].map(r => `
-          <div class="risco-item">
-            <div class="ri-header">
-              <span class="ri-nome">${r.label}</span>
-              <span class="ri-score ${r.badge}">${r.val} colab. · ${totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0}%</span>
-            </div>
-            <div class="barra"><div class="bf ${r.cls}" style="width:${totalDiag > 0 ? Math.round(r.val / totalDiag * 100) : 0}%"></div></div>
-          </div>
-        `).join('')}
+        ${distHtml}
         ${totalDiag === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">Nenhum diagnóstico realizado.</p>' : ''}
       </div>
-
       <div class="s-card">
         <div class="s-titulo">Score por eixo psicossocial</div>
         <div class="s-sub">Média dos diagnósticos por dimensão</div>
-        ${eixos.length > 0 ? eixos.map(e => {
-          const cor = e.score >= 70 ? 'bf-baixo' : e.score >= 40 ? 'bf-medio' : 'bf-alto';
-          const badge = e.score >= 70 ? 'rs-baixo' : e.score >= 40 ? 'rs-medio' : 'rs-alto';
-          return `
-            <div class="risco-item">
-              <div class="ri-header">
-                <span class="ri-nome" style="font-size:12px">${e.label}</span>
-                <span class="ri-score ${badge}">${e.score}</span>
-              </div>
-              <div class="barra"><div class="bf ${cor}" style="width:${e.score}%"></div></div>
-            </div>
-          `;
-        }).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0;font-style:italic">Dados insuficientes.</p>'}
+        ${eixosHtml}
       </div>
     </div>
-
-    <!-- Alertas -->
     <div class="s-card" style="margin-bottom:24px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <div class="s-titulo">Alertas identificados</div>
-        ${alertas?.length > 0 ? `<span class="tag-dourado">${alertas.length} ativo${alertas.length > 1 ? 's' : ''}</span>` : ''}
+        ${alertas && alertas.length > 0 ? '<span class="tag-dourado">' + alertas.length + ' ativo' + (alertas.length > 1 ? 's' : '') + '</span>' : ''}
       </div>
       <div class="s-sub">Gerados automaticamente com base nos diagnósticos</div>
       ${alertasHtml}
     </div>
-
-    <!-- Recomendações -->
     <div class="s-card" style="margin-bottom:24px">
       <div class="s-titulo">Recomendações prioritárias</div>
       <div class="s-sub">Ordenadas por urgência com base nos dados</div>
-      ${recs.map((r, i) => `
-        <div class="alerta-item">
-          <div style="width:22px;height:22px;border-radius:50%;background:rgba(27,58,52,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde);flex-shrink:0;margin-top:2px">${i + 1}</div>
-          <div>
-            <div class="a-titulo">${r.texto}</div>
-            <div style="font-size:11px;color:var(--ink2);margin-top:3px">Prazo sugerido: <strong>${r.prazo}</strong></div>
-          </div>
-        </div>
-      `).join('')}
+      ${recsHtml}
     </div>
-
-    <!-- Ações do próximo mês -->
     <div class="s-card">
       <div class="s-titulo">Ações para o próximo mês</div>
       <div class="s-sub">Checklist prático para o RH</div>
-      ${acoes.map((a, i) => `
-        <div class="alerta-item">
-          <div style="width:22px;height:22px;border-radius:50%;background:rgba(53,84,93,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--verde2);flex-shrink:0;margin-top:2px">${i + 1}</div>
-          <div class="a-titulo" style="font-weight:400">${a}</div>
-        </div>
-      `).join('')}
+      ${acoesHtml}
     </div>
   `;
 
-  // Salvar no banco para histórico
   if (totalDiag > 0) {
     await sb.from('relatorios_empresa').upsert({
       empresa_id: empresaId,
@@ -1008,53 +817,19 @@ async function renderRelatorio() {
     }, { onConflict: 'empresa_id' });
   }
 }
-  const empresaId = perfil?.empresa_id;
-  if (!empresaId) { document.getElementById('sec-relatorio').innerHTML = '<div class="loading">Carregando...</div>'; return; }
 
-  const { data: rel } = await sb.from('relatorios_empresa').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(1).single();
-
-  document.getElementById('sec-relatorio').innerHTML = `
-    <div style="margin-bottom:24px">
-      <div class="s-titulo">Relatório interpretativo</div>
-      <div style="font-size:12px;color:var(--ink2);margin-top:4px">Gerado automaticamente por IA · ${rel ? new Date(rel.created_at).toLocaleDateString('pt-BR') : 'Atualizado agora'}</div>
-    </div>
-    <div class="ia-box" style="margin-bottom:24px">
-      <div class="ia-icon">✦</div>
-      <div>
-        <div class="ia-label">Análise completa — IA Sentio</div>
-        <div class="ia-txt">${rel?.resumo_ia || 'Realize diagnósticos com seus colaboradores para obter o relatório interpretativo completo com recomendações personalizadas.'}</div>
-      </div>
-    </div>
-    ${rel ? `
-    <div class="metrics">
-      <div class="m-card c-dourado"><div class="m-lbl">Total colaboradores</div><div class="m-val">${rel.total_colaboradores}</div></div>
-      <div class="m-card c-azul"><div class="m-lbl">Diagnósticos</div><div class="m-val">${rel.total_diagnosticos}</div></div>
-      <div class="m-card c-verde"><div class="m-lbl">Engajamento</div><div class="m-val">${rel.percentual_engajamento}%</div></div>
-      <div class="m-card c-amarelo"><div class="m-lbl">Score médio</div><div class="m-val">${rel.media_score_risco}</div></div>
-    </div>` : ''}
-  `;
-}
-
-// ══════════════════════════════
-// HOME COLABORADOR
-// ══════════════════════════════
 async function abrirHomeColaborador() {
   trocarTela('tela-colaborador');
   document.getElementById('nome-colab').textContent = perfil?.nome || 'Colaborador';
   document.getElementById('av-colab').textContent = (perfil?.nome || 'C')[0].toUpperCase();
   document.getElementById('cargo-colab').textContent = perfil?.cargo || 'Colaborador';
-  document.getElementById('titulo-colab').textContent = `Olá, ${(perfil?.nome || '').split(' ')[0] || 'bem-vindo'}`;
-
+  document.getElementById('titulo-colab').textContent = 'Olá, ' + ((perfil?.nome || '').split(' ')[0] || 'bem-vindo');
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   document.getElementById('data-hoje').textContent = hoje.charAt(0).toUpperCase() + hoje.slice(1);
-
-  // Verificar se já fez diagnóstico
   const { data: diagRecente } = await sb.from('diagnosticos')
     .select('*').eq('colaborador_id', perfil.id).eq('status', 'completo')
     .order('created_at', { ascending: false }).limit(1).single();
-
   const temDiag = !!diagRecente;
-
   document.getElementById('sec-colab-home').innerHTML = `
     <div class="c-welcome">
       <h2>Sua saúde importa aqui.</h2>
@@ -1087,50 +862,30 @@ async function abrirHomeColaborador() {
     </div>
     <div id="conts-home" class="loading">Carregando conteúdos...</div>
   `;
-
-  document.getElementById('header-colab-btn').innerHTML = `
-    <button class="btn-pri" onclick="navegarColab('diagnostico',null)">Fazer diagnóstico →</button>
-  `;
-
+  document.getElementById('header-colab-btn').innerHTML = '<button class="btn-pri" onclick="navegarColab(\'diagnostico\',null)">Fazer diagnóstico →</button>';
   await renderConteudos();
   await renderSessoes('colaborador');
-
-  // Conteúdos no home
   const { data: conts } = await sb.from('conteudos').select('*').eq('ativo', true).limit(3).order('ordem');
   const el = document.getElementById('conts-home');
   if (el && conts) {
     el.className = 'cont-grid';
-    el.innerHTML = conts.map(c => `
-      <div class="cont-card">
-        <div class="cont-capa" style="background:linear-gradient(135deg,${c.cor_capa},${c.cor_capa}99)">${c.emoji}</div>
-        <div class="cont-body">
-          <div class="cont-cat">${c.categoria}</div>
-          <div class="cont-titulo">${c.titulo}</div>
-          <div class="cont-tempo">⏱ ${c.tempo_estimado} min · ${c.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo'}</div>
-        </div>
-      </div>
-    `).join('');
+    el.innerHTML = conts.map(function(c) {
+      return '<div class="cont-card"><div class="cont-capa" style="background:linear-gradient(135deg,' + c.cor_capa + ',' + c.cor_capa + '99)">' + c.emoji + '</div><div class="cont-body"><div class="cont-cat">' + c.categoria + '</div><div class="cont-titulo">' + c.titulo + '</div><div class="cont-tempo">⏱ ' + c.tempo_estimado + ' min · ' + (c.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</div></div></div>';
+    }).join('');
   }
 }
 
-// ══════════════════════════════
-// DIAGNÓSTICO
-// ══════════════════════════════
 async function iniciarDiagnostico() {
   document.getElementById('sec-colab-diag').style.display = 'block';
   document.getElementById('diag-result-area').style.display = 'none';
   document.getElementById('diag-form-area').style.display = 'block';
-
   if (perguntas.length === 0) {
     const { data } = await sb.from('perguntas_diagnostico').select('*').eq('ativa', true).order('ordem');
     perguntas = data || [];
   }
-
   perguntaAtual = 0;
   respostas = {};
   diagnosticoId = null;
-
-  // Criar diagnóstico em branco
   if (perfil) {
     const { data } = await sb.from('diagnosticos').insert({
       colaborador_id: perfil.id,
@@ -1140,7 +895,6 @@ async function iniciarDiagnostico() {
     }).select().single();
     if (data) diagnosticoId = data.id;
   }
-
   renderPergunta();
 }
 
@@ -1149,11 +903,9 @@ function renderPergunta() {
     document.getElementById('diag-form-area').innerHTML = '<p style="color:var(--ink2);text-align:center;padding:40px">Carregando perguntas...</p>';
     return;
   }
-
   const p = perguntas[perguntaAtual];
   const total = perguntas.length;
   const pct = Math.round(((perguntaAtual + 1) / total) * 100);
-
   const eixoLabels = {
     organizacao_trabalho: 'Organização do Trabalho',
     condicoes_trabalho: 'Condições do Trabalho',
@@ -1161,7 +913,6 @@ function renderPergunta() {
     reconhecimento_crescimento: 'Reconhecimento e Crescimento',
     elo_trabalho_vida: 'Elo Trabalho e Vida Social'
   };
-
   document.getElementById('diag-form-area').innerHTML = `
     <div class="d-progress"><div class="d-fill" style="width:${pct}%"></div></div>
     <div class="d-labels"><span>Pergunta ${perguntaAtual + 1} de ${total}</span><span>${pct}%</span></div>
@@ -1170,9 +921,7 @@ function renderPergunta() {
       <h3>${p.texto_pergunta}</h3>
       <div class="escala-lbls"><span>Nunca</span><span>Sempre</span></div>
       <div class="escala-opts">
-        ${[1,2,3,4,5].map(n => `
-          <button class="e-btn ${respostas[p.id] === n ? 'sel' : ''}" onclick="selecionarResp(this, '${p.id}', ${n})">${n}</button>
-        `).join('')}
+        ${[1,2,3,4,5].map(n => '<button class="e-btn ' + (respostas[p.id] === n ? 'sel' : '') + '" onclick="selecionarResp(this, \'' + p.id + '\', ' + n + ')">' + n + '</button>').join('')}
       </div>
     </div>
     <div class="d-nav">
@@ -1197,8 +946,6 @@ function pergAnterior() {
 
 async function proxPergunta() {
   const p = perguntas[perguntaAtual];
-
-  // Salvar resposta no banco
   if (diagnosticoId && perfil && respostas[p.id]) {
     await sb.from('respostas_diagnostico').upsert({
       diagnostico_id: diagnosticoId,
@@ -1208,7 +955,6 @@ async function proxPergunta() {
       resposta_numero: respostas[p.id]
     });
   }
-
   if (perguntaAtual < perguntas.length - 1) {
     perguntaAtual++;
     renderPergunta();
@@ -1218,11 +964,9 @@ async function proxPergunta() {
 }
 
 async function finalizarDiagnostico() {
-  // Calcular score
   let somaTotal = 0, pesoTotal = 0;
   const scores = { organizacao_trabalho:0, condicoes_trabalho:0, relacoes_socioprofissionais:0, reconhecimento_crescimento:0, elo_trabalho_vida:0 };
-  const pesos = { organizacao_trabalho:0, condicoes_trabalho:0, relacoes_socioprofissionais:0, reconhecimento_crescimento:0, elo_trabalho_vida:0 };
-
+  const pesos  = { organizacao_trabalho:0, condicoes_trabalho:0, relacoes_socioprofissionais:0, reconhecimento_crescimento:0, elo_trabalho_vida:0 };
   perguntas.forEach(p => {
     const r = respostas[p.id];
     if (r) {
@@ -1230,19 +974,15 @@ async function finalizarDiagnostico() {
       somaTotal += r * peso;
       pesoTotal += 5 * peso;
       scores[p.eixo] = (scores[p.eixo] || 0) + r * peso;
-      pesos[p.eixo] = (pesos[p.eixo] || 0) + 5 * peso;
+      pesos[p.eixo]  = (pesos[p.eixo]  || 0) + 5 * peso;
     }
   });
-
   const scoreNorm = pesoTotal > 0 ? Math.round(((somaTotal - pesoTotal/5) / (pesoTotal - pesoTotal/5)) * 100) : 50;
   const nivelRisco = scoreNorm >= 70 ? 'baixo' : scoreNorm >= 40 ? 'medio' : 'alto';
-
   const scoresPorEixo = {};
   Object.keys(scores).forEach(e => {
     scoresPorEixo[e] = pesos[e] > 0 ? Math.round(((scores[e] - pesos[e]/5) / (pesos[e] - pesos[e]/5)) * 100) : 50;
   });
-
-  // Atualizar diagnóstico no banco
   if (diagnosticoId) {
     await sb.from('diagnosticos').update({
       score_total: scoreNorm,
@@ -1256,8 +996,6 @@ async function finalizarDiagnostico() {
       score_elo: scoresPorEixo.elo_trabalho_vida
     }).eq('id', diagnosticoId);
   }
-
-  // Mostrar resultado
   document.getElementById('diag-form-area').style.display = 'none';
   document.getElementById('diag-result-area').style.display = 'block';
   document.getElementById('diag-result-area').innerHTML = `
@@ -1268,69 +1006,10 @@ async function finalizarDiagnostico() {
       <div class="res-nivel n-${nivelRisco}">
         ${nivelRisco === 'baixo' ? '✓ Nível de atenção: Baixo' : nivelRisco === 'medio' ? '⚠ Nível de atenção: Médio' : '⚠ Nível de atenção: Alto'}
       </div>
-      <p style="font-size:13px;color:var(--ink2);margin-bottom:28px;font-style:italic;max-width:400px;margin:0 auto 28px">
-        ${nivelRisco === 'baixo'
-          ? 'Seu resultado indica um ambiente de trabalho saudável. Continue com seus hábitos e explore os conteúdos de bem-estar.'
-          : nivelRisco === 'medio'
-          ? 'Identificamos alguns pontos de atenção. Recomendamos explorar os conteúdos personalizados e considerar agendar uma sessão.'
-          : 'Identificamos fatores de risco que precisam de atenção. Recomendamos agendar uma sessão com nossos psicólogos o quanto antes.'
-        }
-      </p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <button class="btn-pri" onclick="navegarColab('sessoes',null);document.getElementById('sec-colab-diag').style.display='none'">Agendar sessão →</button>
-        <button class="btn-sec" onclick="navegarColab('conteudos',null);document.getElementById('sec-colab-diag').style.display='none'">Ver conteúdos recomendados</button>
-      </div>
+      ${nivelRisco !== 'baixo' ? '<p style="font-size:13px;color:var(--ink2);margin-bottom:24px">Com base no seu diagnóstico, recomendamos agendar uma conversa com um psicólogo. É confidencial e gratuito pelo programa da empresa.</p>' : '<p style="font-size:13px;color:var(--ink2);margin-bottom:24px">Seu resultado indica um ambiente saudável. Continue cuidando do seu bem-estar!</p>'}
+      <button class="btn-p" onclick="navegarColab('home', null)">Voltar ao início</button>
     </div>
   `;
-}
-
-// ══════════════════════════════
-// MODO DEMO (sem perfil no banco)
-// ══════════════════════════════
-function renderDemoMode() {
-  if (tipoUsuario === 'gestor') {
-    document.getElementById('nome-gestor').textContent = 'Demo · Gestor';
-    document.getElementById('subtitulo-gestor').textContent = 'Empresa Demo · Modo demonstração';
-    document.getElementById('sec-dashboard').innerHTML = `
-      <div style="background:rgba(176,137,74,.08);border:1px solid rgba(176,137,74,.2);border-radius:12px;padding:20px 24px;margin-bottom:24px;font-size:13px;color:var(--dourado)">
-        ⚠ Você está em modo demonstração. Para acessar dados reais, sua empresa precisa ser cadastrada no sistema.
-      </div>
-      <div class="metrics">
-        <div class="m-card c-dourado"><div class="m-lbl">Índice de Risco Geral</div><div class="m-val" style="font-size:32px">--</div><div class="m-sub">Sem dados</div></div>
-        <div class="m-card c-amarelo"><div class="m-lbl">Em atenção</div><div class="m-val" style="font-size:32px">--</div></div>
-        <div class="m-card c-verde"><div class="m-lbl">Diagnósticos</div><div class="m-val" style="font-size:32px">0</div></div>
-        <div class="m-card c-azul"><div class="m-lbl">Taxa de adesão</div><div class="m-val" style="font-size:32px">0%</div></div>
-      </div>
-      <div class="ia-box">
-        <div class="ia-icon">✦</div>
-        <div>
-          <div class="ia-label">Como ativar sua empresa</div>
-          <div class="ia-txt">Para começar a usar o Sentio com dados reais, cadastre sua empresa e convide seus colaboradores. Entre em contato com nosso suporte para configurar sua conta.</div>
-        </div>
-      </div>
-    `;
-    renderConteudos();
-  } else {
-    document.getElementById('nome-colab').textContent = 'Demo · Colaborador';
-    document.getElementById('titulo-colab').textContent = 'Olá, bem-vindo';
-    document.getElementById('sec-colab-home').innerHTML = `
-      <div class="c-welcome">
-        <h2>Bem-vindo ao Sentio.</h2>
-        <p>Você está em modo demonstração. Explore a plataforma.</p>
-        <span class="badge b-pend">⚠ Complete seu cadastro para começar</span>
-      </div>
-      <div class="c-grid">
-        <div class="c-card" onclick="navegarColab('diagnostico',null)"><span class="c-icon">📋</span><h3>Diagnóstico psicossocial</h3><p>Responda o questionário de 20 perguntas baseado na NR-1.</p><span class="c-cta">Começar →</span></div>
-        <div class="c-card" onclick="navegarColab('sessoes',null)"><span class="c-icon">🛋️</span><h3>Agendar sessão</h3><p>Fale com um psicólogo. Sigiloso e sem julgamento.</p><span class="c-cta">Ver horários →</span></div>
-        <div class="c-card" onclick="navegarColab('conteudos',null)"><span class="c-icon">📚</span><h3>Conteúdos</h3><p>Artigos e vídeos personalizados para você.</p><span class="c-cta">Explorar →</span></div>
-      </div>
-    `;
-    document.getElementById('header-colab-btn').innerHTML = `<button class="btn-pri" onclick="navegarColab('diagnostico',null)">Fazer diagnóstico →</button>`;
-    renderConteudos();
-
-    // Inicializar diagnóstico demo
-    perguntas = [];
-  }
 }
 </script>
 </body>
