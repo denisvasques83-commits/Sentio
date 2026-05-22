@@ -317,6 +317,19 @@ const SUPABASE_KEY = 'sb_publishable_JpzYbCNwg_WT90baJ2xolg_d58AoSnG';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let usuario = null;
+
+var TRILHA_EIXO = {
+  1: 'score_organizacao',
+  2: 'score_organizacao',
+  3: 'score_relacoes',
+  4: 'score_relacoes',
+  5: 'score_condicoes',
+  6: 'score_relacoes',
+  7: 'score_elo',
+  8: 'score_elo',
+  9: 'score_reconhecimento'
+};
+
 let perfil = null;
 let empresa = null;
 let tipoUsuario = 'gestor';
@@ -787,11 +800,31 @@ async function renderConteudos() {
 
     trilhasRec.forEach(function(t, i) {
       var prog = progressoMap[t.id];
-      var modConc = prog ? (prog.modulos_concluidos || 0) : 0;
-      var pct = Math.round((modConc / t.modulos) * 100);
-      var corBadge = t.nivel === 'Crítico' ? 'rs-alto' : t.nivel === 'Alto' ? 'rs-alto' : 'rs-medio';
-      var iniciada = modConc > 0;
+      var modConc   = prog ? (prog.modulos_concluidos || 0) : 0;
+      var pct       = Math.round((modConc / t.modulos) * 100);
+      var corBadge  = t.nivel === 'Crítico' ? 'rs-alto' : t.nivel === 'Alto' ? 'rs-alto' : 'rs-medio';
+      var iniciada  = modConc > 0;
       var concluida = pct >= 100;
+      var sAntes  = prog ? prog.score_antes  : null;
+      var sDepois = prog ? prog.score_depois : null;
+      var temScore = sAntes && sDepois;
+      var diff     = temScore ? sDepois - sAntes : null;
+      var melhorou = diff !== null && diff < 0;
+
+      var scoreHtml = '';
+      if (temScore) {
+        var corA = sAntes  >= 67 ? 'var(--alto)' : sAntes  >= 34 ? 'var(--medio)' : 'var(--baixo)';
+        var corD = sDepois >= 67 ? 'var(--alto)' : sDepois >= 34 ? 'var(--medio)' : 'var(--baixo)';
+        scoreHtml = '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:8px 10px;background:' + (melhorou ? 'rgba(42,122,75,.07)' : 'rgba(82,82,82,.05)') + ';border-radius:8px">' +
+          '<div style="font-size:11px;color:var(--ink2)">Score do eixo</div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<span style="font-size:13px;font-weight:500;color:' + corA + '">' + sAntes + '</span>' +
+            '<span style="font-size:11px;color:var(--ink2)">→</span>' +
+            '<span style="font-size:13px;font-weight:500;color:' + corD + '">' + sDepois + '</span>' +
+            '<span style="font-size:11px;font-weight:600;color:' + (melhorou ? 'var(--baixo)' : diff === 0 ? 'var(--ink2)' : 'var(--alto)') + '">' + (melhorou ? '↓' + Math.abs(diff) : diff === 0 ? '=' : '↑' + diff) + '</span>' +
+          '</div>' +
+        '</div>';
+      }
 
       htmlColab += '<div class="s-card" style="cursor:pointer;transition:all .2s" onclick="abrirTrilha(' + t.id + ',' + JSON.stringify(t).replace(/"/g, '&quot;') + ')">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
@@ -805,6 +838,7 @@ async function renderConteudos() {
           '<span style="font-weight:500;color:' + (concluida ? 'var(--baixo)' : 'var(--ink2)') + '">' + (concluida ? '✓ Concluída' : iniciada ? pct + '%' : 'Iniciar') + '</span>' +
         '</div>' +
         '<div class="barra"><div class="bf ' + (concluida ? 'bf-baixo' : 'bf-medio') + '" style="width:' + pct + '%"></div></div>' +
+        scoreHtml +
       '</div>';
     });
 
@@ -1031,26 +1065,31 @@ async function abrirModuloConteudo(moduloId, trilhaId) {
 async function marcarModuloConcluido(moduloId, trilhaId) {
   if (!perfil?.id) return;
 
+  // Buscar progresso atual
   var { data: progAtual } = await sb.from('progresso_trilhas')
-    .select('*')
-    .eq('colaborador_id', perfil.id)
-    .eq('trilha_id', trilhaId)
-    .single();
+    .select('*').eq('colaborador_id', perfil.id).eq('trilha_id', trilhaId).single();
 
   var idsConc = progAtual?.modulos_ids_concluidos ? JSON.parse(progAtual.modulos_ids_concluidos) : [];
-
-  if (!idsConc.includes(moduloId)) {
-    idsConc.push(moduloId);
-  }
+  if (!idsConc.includes(moduloId)) idsConc.push(moduloId);
 
   var { data: totalMods } = await sb.from('conteudos')
-    .select('id', { count: 'exact' })
-    .eq('trilha_id', trilhaId)
-    .eq('ativo', true);
+    .select('id', { count: 'exact' }).eq('trilha_id', trilhaId).eq('ativo', true);
 
   var totalCount = totalMods?.length || 0;
-  var concCount = idsConc.length;
-  var concluida = concCount >= totalCount;
+  var concCount  = idsConc.length;
+  var concluida  = concCount >= totalCount;
+
+  // Buscar score do eixo correspondente no diagnóstico mais recente
+  var eixoCampo  = TRILHA_EIXO[trilhaId] || 'score_total';
+  var { data: diagRecente } = await sb.from('diagnosticos')
+    .select('score_total,' + eixoCampo)
+    .eq('colaborador_id', perfil.id).eq('status', 'completo')
+    .order('created_at', { ascending: false }).limit(1).single();
+
+  var scoreAtual = diagRecente ? (diagRecente[eixoCampo] || diagRecente.score_total || 0) : 0;
+
+  // score_antes: salvar só na primeira vez (quando ainda não existe progresso)
+  var scoreAntes = progAtual?.score_antes || (idsConc.length === 1 ? scoreAtual : null);
 
   await sb.from('progresso_trilhas').upsert({
     colaborador_id:         perfil.id,
@@ -1059,19 +1098,70 @@ async function marcarModuloConcluido(moduloId, trilhaId) {
     modulos_concluidos:     concCount,
     modulos_ids_concluidos: JSON.stringify(idsConc),
     concluida:              concluida,
+    score_antes:            scoreAntes,
+    score_depois:           concluida ? scoreAtual : null,
     updated_at:             new Date().toISOString()
   }, { onConflict: 'colaborador_id,trilha_id' });
 
   if (concluida) {
-    document.getElementById('sec-colab-cont').innerHTML = '<div style="text-align:center;padding:60px 20px">' +
-      '<div style="font-size:56px;margin-bottom:16px">🎯</div>' +
-      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:600;color:var(--ink);margin-bottom:12px">Trilha concluída!</div>' +
-      '<div style="font-size:14px;color:var(--ink2);max-width:400px;margin:0 auto 24px;line-height:1.7">Você concluiu todos os módulos desta trilha. O seu progresso foi registrado como evidência de ação pela empresa.</div>' +
-      '<button class="btn-p" onclick="renderConteudos()">Ver minhas trilhas →</button>' +
-    '</div>';
+    exibirTelaConclusaoTrilha(trilhaId, scoreAntes, scoreAtual, eixoCampo);
   } else {
     abrirTrilha(trilhaId, { nome: '', motivo: '' });
   }
+}
+
+function exibirTelaConclusaoTrilha(trilhaId, scoreAntes, scoreDepois, eixoCampo) {
+  var nomesTrilhas = {
+    1:'Gestão de Demanda', 2:'Prevenção de Exaustão', 3:'Segurança Psicológica',
+    4:'Liderança sob Pressão', 5:'Clareza Operacional', 6:'Comunicação Assertiva',
+    7:'Regulação Emocional', 8:'Gestão de Rotina', 9:'Reconhecimento e Autonomia'
+  };
+  var nomeTrilha = nomesTrilhas[trilhaId] || 'Trilha';
+
+  // No EACT: score baixo = melhor. Diferença negativa = melhora
+  var diff = scoreAntes && scoreDepois ? scoreDepois - scoreAntes : null;
+  var melhorou = diff !== null && diff < 0;
+  var igual    = diff !== null && diff === 0;
+
+  var scoreHtml = '';
+  if (scoreAntes && scoreDepois) {
+    var corAntes  = scoreAntes  >= 67 ? 'var(--alto)'  : scoreAntes  >= 34 ? 'var(--medio)' : 'var(--baixo)';
+    var corDepois = scoreDepois >= 67 ? 'var(--alto)'  : scoreDepois >= 34 ? 'var(--medio)' : 'var(--baixo)';
+    var diffLabel = melhorou ? '↓ ' + Math.abs(diff) + ' pts — risco reduziu' : igual ? '→ Sem variação' : '↑ ' + diff + ' pts';
+    var diffCor   = melhorou ? 'var(--baixo)' : igual ? 'var(--ink2)' : 'var(--alto)';
+
+    scoreHtml = '<div style="background:var(--branco);border:1.5px solid var(--neutro2);border-radius:16px;padding:24px;margin:24px auto;max-width:400px">' +
+      '<div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dourado);margin-bottom:16px;text-align:center">Score do eixo · ' + eixoCampo.replace('score_','').replace('_',' ') + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:16px">' +
+        '<div style="text-align:center">' +
+          '<div style="font-size:11px;color:var(--ink2);margin-bottom:6px">Antes da trilha</div>' +
+          '<div style="font-family:Cormorant Garamond,serif;font-size:44px;font-weight:600;color:' + corAntes + ';line-height:1">' + scoreAntes + '</div>' +
+        '</div>' +
+        '<div style="font-size:24px;color:var(--ink2)">→</div>' +
+        '<div style="text-align:center">' +
+          '<div style="font-size:11px;color:var(--ink2);margin-bottom:6px">Score atual</div>' +
+          '<div style="font-family:Cormorant Garamond,serif;font-size:44px;font-weight:600;color:' + corDepois + ';line-height:1">' + scoreDepois + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="text-align:center;font-size:14px;font-weight:500;color:' + diffCor + '">' + diffLabel + '</div>' +
+      (melhorou ? '<div style="font-size:12px;color:var(--ink2);text-align:center;margin-top:8px">O conteúdo desta trilha contribuiu para a redução do risco neste eixo.</div>' : '') +
+    '</div>';
+  }
+
+  document.getElementById('sec-colab-cont').innerHTML =
+    '<div style="text-align:center;padding:48px 20px;max-width:480px;margin:0 auto">' +
+      '<div style="font-size:56px;margin-bottom:16px">' + (melhorou ? '🎯' : '✅') + '</div>' +
+      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:600;color:var(--ink);margin-bottom:8px">Trilha concluída!</div>' +
+      '<div style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:8px">' +
+        'Você concluiu todos os módulos de <strong>' + nomeTrilha + '</strong>. O progresso foi registrado como evidência de intervenção pela empresa.' +
+      '</div>' +
+      scoreHtml +
+      '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px">' +
+        '<button class="btn-sec" onclick="renderConteudos()">Ver minhas trilhas</button>' +
+        '<button class="btn-p" onclick="navegarColab('diagnostico',null)">Refazer diagnóstico →</button>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--ink2);margin-top:16px">Refazer o diagnóstico atualiza seu score e mostra a evolução real.</div>' +
+    '</div>';
 }
 
 function abrirModulo(id) {
