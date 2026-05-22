@@ -231,15 +231,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--neutro);c
 <div id="tela-dashboard" class="tela">
   <div class="app-layout">
     <aside class="sidebar" id="sidebar-gestor">
-      <div style="padding:0 28px;margin-bottom:10px">
-        <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--neutro);letter-spacing:2px;display:flex;align-items:center;gap:8px">
-          SENTIO
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="9" cy="9" r="8" stroke="#B0894A" stroke-width="1.2"/>
-            <circle cx="9" cy="9" r="2.5" fill="#B0894A"/>
-          </svg>
-        </div>
-      </div>
+      <div class="s-logo">SENTIO <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:inline-block;vertical-align:middle;margin-left:4px;margin-bottom:2px"><circle cx="7" cy="7" r="6" stroke="#B0894A" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="#B0894A"/></svg></div>
       <div class="s-tag">Inteligência Psicossocial</div>
       <div class="s-div"></div>
       <div class="s-lbl">Menu principal</div>
@@ -289,15 +281,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--neutro);c
 <div id="tela-colaborador" class="tela">
   <div class="app-layout">
     <aside class="sidebar">
-      <div style="padding:0 28px;margin-bottom:10px">
-        <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--neutro);letter-spacing:2px;display:flex;align-items:center;gap:8px">
-          SENTIO
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="9" cy="9" r="8" stroke="#B0894A" stroke-width="1.2"/>
-            <circle cx="9" cy="9" r="2.5" fill="#B0894A"/>
-          </svg>
-        </div>
-      </div>
+      <div class="s-logo">SENTIO <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:inline-block;vertical-align:middle;margin-left:4px;margin-bottom:2px"><circle cx="7" cy="7" r="6" stroke="#B0894A" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="#B0894A"/></svg></div>
       <div class="s-tag">Inteligência Psicossocial</div>
       <div class="s-div"></div>
       <nav class="s-nav">
@@ -495,10 +479,14 @@ async function renderDashboard() {
     totalColab = colabs?.length || 0;
     // Buscar só diagnósticos de colaboradores (não gestores)
     const idColabs = colabs?.map(c => c.id) || [];
-    const { data: diags } = await sb.from('diagnosticos').select('*')
-      .eq('empresa_id', empresaId).eq('status', 'completo')
-      .in('colaborador_id', idColabs.length > 0 ? idColabs : ['00000000-0000-0000-0000-000000000000']);
-    totalDiag = diags?.length || 0;
+    let diags = [];
+    if (idColabs.length > 0) {
+      const { data: diagsData } = await sb.from('diagnosticos').select('*')
+        .eq('empresa_id', empresaId).eq('status', 'completo')
+        .in('colaborador_id', idColabs);
+      diags = diagsData || [];
+    }
+    totalDiag = diags.length;
     if (diags?.length > 0) {
       const scores = diags.map(d => d.score_total || 0);
       mediaScore = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
@@ -1247,10 +1235,15 @@ async function renderRelatorio() {
 
   // Filtrar diagnósticos apenas de colaboradores (corrige bug taxa de adesão)
   const idsColabs = colabs?.map(function(c) { return c.id; }) || [];
-  const { data: diags } = await sb.from('diagnosticos').select('*')
-    .eq('empresa_id', empresaId).eq('status', 'completo')
-    .in('colaborador_id', idsColabs.length > 0 ? idsColabs : ['00000000-0000-0000-0000-000000000000'])
-    .order('created_at', { ascending: false });
+  var diagsData = [];
+  if (idsColabs.length > 0) {
+    const { data: _diags } = await sb.from('diagnosticos').select('*')
+      .eq('empresa_id', empresaId).eq('status', 'completo')
+      .in('colaborador_id', idsColabs)
+      .order('created_at', { ascending: false });
+    diagsData = _diags || [];
+  }
+  const diags = diagsData;
 
   const totalColab  = colabs?.length  || 0;
   const totalDiag   = diags?.length   || 0;
