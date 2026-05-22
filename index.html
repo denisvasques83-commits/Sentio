@@ -848,7 +848,7 @@ async function renderConteudos() {
         '</div>';
       }
 
-      htmlColab += '<div class="s-card" style="cursor:pointer;transition:all .2s" onclick="abrirTrilha(' + t.id + ',' + JSON.stringify(t).replace(/"/g, '&quot;') + ')">' +
+      htmlColab += '<div class="s-card" style="cursor:pointer;transition:all .2s" onclick="abrirTrilhaPorId(' + t.id + ')">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
           '<div style="font-size:26px">' + t.emoji + '</div>' +
           '<span class="ri-score ' + corBadge + '" style="font-size:10px">' + t.nivel + '</span>' +
@@ -993,6 +993,23 @@ async function renderConteudos() {
 }
 
 // ── Abrir trilha completa ──────────────────────────────────────────
+// Wrapper seguro — busca info da trilha pelo ID sem passar strings com caracteres especiais
+async function abrirTrilhaPorId(trilhaId) {
+  var nomesTrilhas = {
+    1: { nome: 'Gestao de Demanda e Previsibilidade', motivo: 'Organizacao do trabalho' },
+    2: { nome: 'Prevencao de Exaustao Operacional', motivo: 'Sobrecarga alta' },
+    3: { nome: 'Seguranca Psicologica no Trabalho', motivo: 'Relacoes socioprofissionais' },
+    4: { nome: 'Lideranca sob Pressao', motivo: 'Conflito com lideranca' },
+    5: { nome: 'Clareza Operacional', motivo: 'Condicoes do trabalho' },
+    6: { nome: 'Comunicacao Assertiva', motivo: 'Conflito interpessoal' },
+    7: { nome: 'Regulacao Emocional', motivo: 'Elo trabalho-vida social' },
+    8: { nome: 'Gestao de Rotina', motivo: 'Baixa previsibilidade' },
+    9: { nome: 'Reconhecimento e Autonomia', motivo: 'Reconhecimento e crescimento' }
+  };
+  var info = nomesTrilhas[trilhaId] || { nome: 'Trilha', motivo: '' };
+  await abrirTrilha(trilhaId, info);
+}
+
 async function abrirTrilha(trilhaId, info) {
   var el = document.getElementById('sec-colab-cont');
   if (!el) return;
@@ -1009,7 +1026,7 @@ async function abrirTrilha(trilhaId, info) {
       .select('*')
       .eq('colaborador_id', perfil.id)
       .eq('trilha_id', trilhaId)
-      .single();
+      .maybeSingle();
     if (progData) prog = progData;
   }
 
@@ -1067,7 +1084,7 @@ async function abrirModuloConteudo(moduloId, trilhaId) {
   if (!m) return;
 
   el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">' +
-    '<button class="btn-sec" style="font-size:12px" onclick="abrirTrilha(' + trilhaId + ',{nome:\'' + (m.categoria || '') + '\',motivo:\'\'})">← Voltar à trilha</button>' +
+    '<button class="btn-sec" style="font-size:12px" onclick="abrirTrilhaPorId(' + trilhaId + ')">← Voltar à trilha</button>' +
   '</div>' +
   '<div class="s-card" style="max-width:680px">' +
     '<div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dourado);margin-bottom:8px">' + (m.categoria || '') + ' · Módulo ' + (m.modulo_ordem || '') + '</div>' +
@@ -1089,7 +1106,7 @@ async function marcarModuloConcluido(moduloId, trilhaId) {
 
   // Buscar progresso atual
   var { data: progAtual } = await sb.from('progresso_trilhas')
-    .select('*').eq('colaborador_id', perfil.id).eq('trilha_id', trilhaId).single();
+    .select('*').eq('colaborador_id', perfil.id).eq('trilha_id', trilhaId).maybeSingle();
 
   var idsConc = progAtual?.modulos_ids_concluidos ? JSON.parse(progAtual.modulos_ids_concluidos) : [];
   if (!idsConc.includes(moduloId)) idsConc.push(moduloId);
