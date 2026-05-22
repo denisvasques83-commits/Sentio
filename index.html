@@ -246,7 +246,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--neutro);c
         <div class="nav-item" onclick="navegarGestor('relatorio',this)"><span class="nav-ic">▦</span> Relatório IA</div>
         <div class="nav-item" onclick="navegarGestor('configuracoes',this)"><span class="nav-ic">⚙</span> Configurações</div>
         <div class="nav-item" onclick="exibirDireitosLGPD()"><span class="nav-ic">🔒</span> Meus dados</div>
-        <div class="nav-item" style="margin-top:8px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
+        <div class="nav-item" id="nav-admin-link" style="display:none;margin-top:8px" onclick="abrirAdmin()"><span class="nav-ic">🔧</span> Admin</div>
+        <div class="nav-item" style="margin-top:4px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
       </nav>
       <div class="s-footer">
         <div class="s-user">
@@ -464,6 +465,10 @@ async function abrirDashboardGestor() {
   document.getElementById('av-gestor').textContent = (perfil?.nome || 'G')[0].toUpperCase();
   document.getElementById('cargo-gestor').textContent = perfil?.cargo || 'Gestor de RH';
   document.getElementById('subtitulo-gestor').textContent = (empresa?.nome_empresa || 'Sua empresa') + ' · Últimos 30 dias';
+  if (isAdmin()) {
+    var navAdmin = document.getElementById('nav-admin-link');
+    if (navAdmin) navAdmin.style.display = 'flex';
+  }
   await renderDashboard();
   await renderSessoes('gestor');
   await renderConteudos();
@@ -503,6 +508,17 @@ async function renderDashboard() {
     if (numAlertas > 0) { badge.style.display = 'block'; badge.textContent = numAlertas; notif.textContent = numAlertas; }
   }
   const engaj = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
+
+  // Calcular índice de burnout da empresa
+  var burnoutEmpresa = null;
+  if (diags && diags.length > 0) {
+    var burnoutScores = diags.map(calcularIndiceBurnout).filter(Boolean);
+    if (burnoutScores.length > 0) {
+      var mediaBI = Math.round(burnoutScores.reduce(function(a,b){return a+b.indice;},0)/burnoutScores.length);
+      burnoutEmpresa = burnoutScores.reduce(function(a,b){return Math.abs(b.indice-mediaBI)<Math.abs(a.indice-mediaBI)?b:a;});
+      burnoutEmpresa = Object.assign({}, burnoutEmpresa, {indice: mediaBI});
+    }
+  }
   const nivelRisco = mediaScore >= 70 ? 'BAIXO' : mediaScore >= 40 ? 'MÉDIO' : 'ALTO';
   const corGauge = mediaScore >= 70 ? '#2A7A4B' : mediaScore >= 40 ? '#D4860A' : '#C0392B';
   const dashOff = Math.round(201 * (1 - mediaScore/100));
@@ -582,6 +598,21 @@ async function renderDashboard() {
       </div>
     </div>
   `;
+  // Renderizar burnout
+  var burnoutEl = document.getElementById('burnout-dashboard');
+  if (burnoutEl) burnoutEl.innerHTML = renderCardBurnout(burnoutEmpresa, true);
+
+  // Renderizar heatmap
+  if (empresaId) {
+    var heatmapContainer = document.createElement('div');
+    heatmapContainer.className = 's-card';
+    heatmapContainer.style.marginBottom = '24px';
+    heatmapContainer.innerHTML = '<div class="s-titulo" style="margin-bottom:4px">Heatmap de Burnout por Setor</div><div class="s-sub">Índice Maslach por área</div><div id="heatmap-gestor"></div>';
+    var secDash = document.getElementById('sec-dashboard');
+    if (secDash) secDash.appendChild(heatmapContainer);
+    renderHeatmapBurnout(empresaId, 'heatmap-gestor');
+  }
+
   if (empresaId) {
     const { data: alertas } = await sb.from('alertas_empresa').select('*').eq('empresa_id', empresaId).eq('status', 'ativo').limit(3);
     const el = document.getElementById('alertas-preview');
@@ -1798,6 +1829,13 @@ async function abrirHomeColaborador() {
   document.getElementById('header-colab-btn').innerHTML = '<button class="btn-pri" onclick="navegarColab(\'diagnostico\',null)">Fazer diagnóstico →</button>';
   await renderConteudos();
   await renderSessoes('colaborador');
+
+  // Mostrar índice de burnout do colaborador
+  if (diagRecente) {
+    var burnoutColab = calcularIndiceBurnout(diagRecente);
+    var bcEl = document.getElementById('burnout-colab-card');
+    if (bcEl && burnoutColab) bcEl.innerHTML = renderCardBurnout(burnoutColab, false);
+  }
   const { data: conts } = await sb.from('conteudos').select('*').eq('ativo', true).limit(3).order('ordem');
   const el = document.getElementById('conts-home');
   if (el && conts) {
@@ -2932,6 +2970,602 @@ async function excluirConvite(id) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO 1: ÍNDICE DE BURNOUT — MODELO MASLACH ADAPTADO PARA NR-01
+// ══════════════════════════════════════════════════════════════════
+
+// Pesos calibrados por dimensão Maslach
+var BURNOUT_PESOS = {
+  exaustao:        { eixos: ['score_organizacao', 'score_condicoes'],        peso: 0.40 },
+  despersonalizacao: { eixos: ['score_relacoes', 'score_elo'],               peso: 0.35 },
+  baixa_realizacao:  { eixos: ['score_reconhecimento'],                      peso: 0.25 }
+};
+
+function calcularIndiceBurnout(diag) {
+  if (!diag) return null;
+
+  var exaustao = 0, countEx = 0;
+  BURNOUT_PESOS.exaustao.eixos.forEach(function(e) {
+    if (diag[e] != null) { exaustao += diag[e]; countEx++; }
+  });
+  exaustao = countEx > 0 ? exaustao / countEx : 0;
+
+  var despers = 0, countDe = 0;
+  BURNOUT_PESOS.despersonalizacao.eixos.forEach(function(e) {
+    if (diag[e] != null) { despers += diag[e]; countDe++; }
+  });
+  despers = countDe > 0 ? despers / countDe : 0;
+
+  var baixaReal = diag.score_reconhecimento || 0;
+
+  var indice = Math.round(
+    exaustao        * BURNOUT_PESOS.exaustao.peso +
+    despers         * BURNOUT_PESOS.despersonalizacao.peso +
+    baixaReal       * BURNOUT_PESOS.baixa_realizacao.peso
+  );
+
+  var faixa, cor, corHex, descricao, protocolo;
+  if (indice <= 25) {
+    faixa = 'Saudável'; cor = 'var(--baixo)'; corHex = '#2A7A4B';
+    descricao = 'Indicadores dentro do esperado. Manter acompanhamento periódico.';
+    protocolo = 'Monitoramento trimestral. Trilhas de desenvolvimento opcional.';
+  } else if (indice <= 50) {
+    faixa = 'Atenção'; cor = 'var(--medio)'; corHex = '#D4860A';
+    descricao = 'Sinais precoces de esgotamento identificados. Intervenção preventiva recomendada.';
+    protocolo = 'Trilha de prevenção imediata. Reavaliação em 30 dias.';
+  } else if (indice <= 75) {
+    faixa = 'Risco moderado'; cor = '#E67E22'; corHex = '#E67E22';
+    descricao = 'Padrão consistente com burnout em desenvolvimento. Ação estruturada necessária.';
+    protocolo = 'Sessão psicológica recomendada. Revisão de carga de trabalho. Relatório ao RH.';
+  } else {
+    faixa = 'Risco crítico'; cor = 'var(--alto)'; corHex = '#C0392B';
+    descricao = 'Indicadores críticos de burnout. Intervenção imediata obrigatória conforme NR-01.';
+    protocolo = 'Encaminhamento urgente para psicólogo. Afastamento preventivo a avaliar. Notificação ao RH obrigatória.';
+  }
+
+  return {
+    indice, faixa, cor, corHex, descricao, protocolo,
+    dimensoes: {
+      exaustao:         Math.round(exaustao),
+      despersonalizacao: Math.round(despers),
+      baixa_realizacao:  Math.round(baixaReal)
+    }
+  };
+}
+
+function calcularIndiceBurnoutEmpresa(diags) {
+  if (!diags || diags.length === 0) return null;
+  var scores = diags.map(calcularIndiceBurnout).filter(function(b) { return b !== null; });
+  if (scores.length === 0) return null;
+  var media = Math.round(scores.reduce(function(a, b) { return a + b.indice; }, 0) / scores.length);
+  return calcularIndiceBurnout({ score_organizacao: scores[0].dimensoes.exaustao, score_condicoes: scores[0].dimensoes.exaustao, score_relacoes: scores[0].dimensoes.despersonalizacao, score_elo: scores[0].dimensoes.despersonalizacao, score_reconhecimento: scores[0].dimensoes.baixa_realizacao });
+}
+
+function renderCardBurnout(burnout, compacto) {
+  if (!burnout) return '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:12px 0">Diagnóstico necessário para calcular o Índice de Burnout.</p>';
+
+  var barra = Math.round(burnout.indice);
+
+  if (compacto) {
+    return '<div style="background:var(--branco);border:1.5px solid var(--neutro2);border-radius:12px;padding:16px 20px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2)">Índice de Burnout</div>' +
+        '<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;background:' + burnout.corHex + '22;color:' + burnout.corHex + '">' + burnout.faixa + '</span>' +
+      '</div>' +
+      '<div style="font-family:Cormorant Garamond,serif;font-size:40px;font-weight:600;color:' + burnout.cor + ';line-height:1;margin-bottom:6px">' + burnout.indice + '</div>' +
+      '<div style="height:6px;background:var(--neutro2);border-radius:100px;overflow:hidden;margin-bottom:6px">' +
+        '<div style="height:100%;width:' + barra + '%;background:' + burnout.corHex + ';border-radius:100px;transition:width 1s ease"></div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--ink2)">' + burnout.descricao + '</div>' +
+    '</div>';
+  }
+
+  return '<div style="background:var(--verde);border-radius:16px;padding:24px 28px;margin-bottom:20px">' +
+    '<div style="font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:12px">Índice de Burnout · Modelo Maslach · NR-01</div>' +
+    '<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:16px">' +
+      '<div style="font-family:Cormorant Garamond,serif;font-size:64px;font-weight:600;color:var(--neutro);line-height:1">' + burnout.indice + '</div>' +
+      '<div style="padding-bottom:8px">' +
+        '<div style="font-size:18px;font-weight:500;color:' + burnout.corHex + '">' + burnout.faixa + '</div>' +
+        '<div style="font-size:13px;color:rgba(246,244,240,.65)">' + burnout.descricao + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="height:6px;background:rgba(255,255,255,.15);border-radius:100px;overflow:hidden;margin-bottom:16px">' +
+      '<div style="height:100%;width:' + barra + '%;background:' + burnout.corHex + ';border-radius:100px;transition:width 1s ease"></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">' +
+      '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">EXAUSTÃO</div>' +
+        '<div style="font-size:22px;font-weight:500;color:var(--neutro)">' + burnout.dimensoes.exaustao + '</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.4)">Emocional</div>' +
+      '</div>' +
+      '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">DESPERSONALIZAÇÃO</div>' +
+        '<div style="font-size:22px;font-weight:500;color:var(--neutro)">' + burnout.dimensoes.despersonalizacao + '</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.4)">Distanciamento</div>' +
+      '</div>' +
+      '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">REALIZAÇÃO</div>' +
+        '<div style="font-size:22px;font-weight:500;color:var(--neutro)">' + burnout.dimensoes.baixa_realizacao + '</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.4)">Profissional</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
+      '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:6px">PROTOCOLO NR-01</div>' +
+      '<div style="font-size:13px;color:rgba(246,244,240,.8)">' + burnout.protocolo + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// Heatmap de burnout por setor
+async function renderHeatmapBurnout(empresaId, containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+
+  var { data: setores } = await sb.from('setores_empresa').select('*').eq('empresa_id', empresaId).eq('ativo', true);
+  var { data: colabs } = await sb.from('perfis').select('id,nome,setor').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador');
+  var { data: diags } = await sb.from('diagnosticos').select('*').eq('empresa_id', empresaId).eq('status', 'completo').order('created_at', { ascending: false });
+
+  if (!setores || setores.length === 0) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Cadastre setores em Configurações para ver o heatmap por área.</p>';
+    return;
+  }
+
+  var diagPorColab = {};
+  if (diags) {
+    diags.forEach(function(d) {
+      if (!diagPorColab[d.colaborador_id]) diagPorColab[d.colaborador_id] = d;
+    });
+  }
+
+  var setorData = setores.map(function(s) {
+    var membros = colabs ? colabs.filter(function(c) { return c.setor === s.nome; }) : [];
+    var diagsSetor = membros.map(function(m) { return diagPorColab[m.id]; }).filter(Boolean);
+    var burnouts = diagsSetor.map(calcularIndiceBurnout).filter(Boolean);
+    var media = burnouts.length > 0 ? Math.round(burnouts.reduce(function(a, b) { return a + b.indice; }, 0) / burnouts.length) : null;
+    var faixa = media === null ? null : media <= 25 ? 'Saudável' : media <= 50 ? 'Atenção' : media <= 75 ? 'Risco moderado' : 'Risco crítico';
+    var corHex = media === null ? '#D8D1C4' : media <= 25 ? '#2A7A4B' : media <= 50 ? '#D4860A' : media <= 75 ? '#E67E22' : '#C0392B';
+    return { nome: s.nome, membros: membros.length, diagnosticados: diagsSetor.length, media, faixa, corHex, burnouts };
+  });
+
+  setorData.sort(function(a, b) { return (b.media || 0) - (a.media || 0) });
+
+  el.innerHTML = setorData.map(function(s) {
+    var pct = s.media || 0;
+    return '<div style="margin-bottom:14px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+        '<div>' +
+          '<span style="font-size:13px;font-weight:500;color:var(--ink)">' + s.nome + '</span>' +
+          '<span style="font-size:11px;color:var(--ink2);margin-left:8px">' + s.diagnosticados + '/' + s.membros + ' diagnosticados</span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          (s.media !== null ? '<span style="font-size:13px;font-weight:600;color:' + s.corHex + '">' + s.media + '</span>' : '') +
+          (s.faixa ? '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:100px;background:' + s.corHex + '22;color:' + s.corHex + '">' + s.faixa + '</span>' : '<span style="font-size:11px;color:var(--ink2)">Sem dados</span>') +
+        '</div>' +
+      '</div>' +
+      '<div style="height:8px;background:var(--neutro2);border-radius:100px;overflow:hidden">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + s.corHex + ';border-radius:100px;transition:width 1s ease"></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO 2: ADMIN CRM — PAINEL SUPER ADMIN SENTIO
+// ══════════════════════════════════════════════════════════════════
+
+var ADMIN_EMAIL = 'denisvasques83@gmail.com';
+
+function isAdmin() {
+  return usuario && usuario.email === ADMIN_EMAIL;
+}
+
+async function abrirAdmin() {
+  if (!isAdmin()) { alert('Acesso restrito.'); return; }
+  trocarTela('tela-admin');
+  await renderAdminDashboard();
+}
+
+async function renderAdminDashboard() {
+  var sec = document.getElementById('admin-content');
+  sec.innerHTML = '<div class="loading">Carregando...</div>';
+
+  var [
+    { data: empresas },
+    { data: totalUsers },
+    { data: totalDiags },
+    { data: totalModulos }
+  ] = await Promise.all([
+    sb.from('empresas').select('*').order('created_at', { ascending: false }),
+    sb.from('perfis').select('id', { count: 'exact' }),
+    sb.from('diagnosticos').select('id', { count: 'exact' }).eq('status', 'completo'),
+    sb.from('conteudos').select('id', { count: 'exact' }).eq('ativo', true)
+  ]);
+
+  var numEmpresas = empresas?.length || 0;
+  var numUsers = totalUsers?.length || 0;
+  var numDiags = totalDiags?.length || 0;
+  var numMods = totalModulos?.length || 0;
+
+  sec.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px">
+      ${[
+        { lbl: 'Empresas', val: numEmpresas, cor: 'c-dourado' },
+        { lbl: 'Colaboradores', val: numUsers, cor: 'c-azul' },
+        { lbl: 'Diagnósticos', val: numDiags, cor: 'c-verde' },
+        { lbl: 'Módulos ativos', val: numMods, cor: 'c-amarelo' }
+      ].map(m => `<div class="m-card ${m.cor}"><div class="m-lbl">${m.lbl}</div><div class="m-val">${m.val}</div></div>`).join('')}
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="s-titulo">Empresas cadastradas</div>
+        <button class="btn-pri" onclick="abrirModalNovaEmpresa()">+ Nova empresa</button>
+      </div>
+      <div id="admin-lista-empresas">
+        ${empresas && empresas.length > 0 ? empresas.map(e => `
+          <div class="s-card" style="margin-bottom:10px;padding:16px 20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+              <div>
+                <div style="font-size:14px;font-weight:500;color:var(--ink)">${e.nome_empresa || 'Empresa sem nome'}</div>
+                <div style="font-size:11px;color:var(--ink2);margin-top:2px">
+                  CNPJ: ${e.cnpj || '—'} · Plano: <strong>${e.plano || 'free'}</strong> · Criada: ${new Date(e.created_at).toLocaleDateString('pt-BR')}
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <span class="ri-score ${e.ativo !== false ? 'rs-baixo' : 'rs-alto'}">${e.ativo !== false ? 'Ativa' : 'Suspensa'}</span>
+                <button class="btn-sec" style="font-size:11px;padding:5px 10px" onclick="abrirEmpresaAdmin('${e.id}')">Gerenciar</button>
+                <button class="btn-sec" style="font-size:11px;padding:5px 10px;color:${e.ativo !== false ? 'var(--alto)' : 'var(--baixo)'};border-color:${e.ativo !== false ? 'var(--alto)' : 'var(--baixo)'}" onclick="toggleEmpresaStatus('${e.id}',${e.ativo !== false})">${e.ativo !== false ? 'Suspender' : 'Reativar'}</button>
+              </div>
+            </div>
+          </div>
+        `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Nenhuma empresa cadastrada ainda.</p>'}
+      </div>
+    </div>
+  `;
+}
+
+async function abrirEmpresaAdmin(empresaId) {
+  var sec = document.getElementById('admin-content');
+  sec.innerHTML = '<div class="loading">Carregando empresa...</div>';
+
+  var [
+    { data: empresa },
+    { data: perfis },
+    { data: diags },
+    { data: convites },
+    { data: setores }
+  ] = await Promise.all([
+    sb.from('empresas').select('*').eq('id', empresaId).single(),
+    sb.from('perfis').select('*').eq('empresa_id', empresaId),
+    sb.from('diagnosticos').select('*').eq('empresa_id', empresaId).eq('status', 'completo'),
+    sb.from('convites_colaboradores').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(10),
+    sb.from('setores_empresa').select('*').eq('empresa_id', empresaId).eq('ativo', true)
+  ]);
+
+  var gestor = perfis?.find(function(p) { return p.tipo_usuario === 'gestor'; });
+  var colabs = perfis?.filter(function(p) { return p.tipo_usuario === 'colaborador'; }) || [];
+  var burnouts = diags ? diags.map(calcularIndiceBurnout).filter(Boolean) : [];
+  var mediaBurnout = burnouts.length > 0 ? Math.round(burnouts.reduce(function(a, b) { return a + b.indice; }, 0) / burnouts.length) : null;
+
+  sec.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <button class="btn-sec" style="font-size:12px" onclick="renderAdminDashboard()">← Voltar</button>
+      <div>
+        <div class="s-titulo">${empresa?.nome_empresa || 'Empresa'}</div>
+        <div style="font-size:12px;color:var(--ink2)">CNPJ: ${empresa?.cnpj || '—'} · Plano: <strong>${empresa?.plano || 'free'}</strong></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+      <div class="m-card c-dourado"><div class="m-lbl">Colaboradores</div><div class="m-val">${colabs.length}</div></div>
+      <div class="m-card c-azul"><div class="m-lbl">Diagnósticos</div><div class="m-val">${diags?.length || 0}</div></div>
+      <div class="m-card c-verde"><div class="m-lbl">Burnout médio</div><div class="m-val">${mediaBurnout || '—'}</div></div>
+      <div class="m-card c-amarelo"><div class="m-lbl">Setores</div><div class="m-val">${setores?.length || 0}</div></div>
+    </div>
+
+    <div class="secoes" style="margin-bottom:24px">
+      <div class="s-card">
+        <div class="s-titulo" style="margin-bottom:4px">Configurações da empresa</div>
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:16px">Editar dados e plano</div>
+        <label class="lbl">Nome da empresa</label>
+        <input type="text" class="inp" id="admin-nome-empresa" value="${empresa?.nome_empresa || ''}">
+        <label class="lbl">CNPJ</label>
+        <input type="text" class="inp" id="admin-cnpj" value="${empresa?.cnpj || ''}">
+        <label class="lbl">Plano</label>
+        <select class="inp" id="admin-plano" style="height:48px">
+          <option value="free" ${empresa?.plano === 'free' ? 'selected' : ''}>Free — até 10 colaboradores</option>
+          <option value="profissional" ${empresa?.plano === 'profissional' ? 'selected' : ''}>Profissional — até 50 colaboradores</option>
+          <option value="enterprise" ${empresa?.plano === 'enterprise' ? 'selected' : ''}>Enterprise — ilimitado</option>
+        </select>
+        <button class="btn-p" onclick="salvarEmpresaAdmin('${empresaId}')" style="width:100%;margin-top:8px">Salvar alterações</button>
+      </div>
+
+      <div class="s-card">
+        <div class="s-titulo" style="margin-bottom:4px">Colaboradores</div>
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:16px">${colabs.length} cadastrados</div>
+        ${colabs.map(c => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--neutro2)">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:var(--ink)">${c.nome || 'Sem nome'}</div>
+              <div style="font-size:11px;color:var(--ink2)">${c.cargo || ''} ${c.setor ? '· ' + c.setor : ''}</div>
+            </div>
+            <button class="btn-sec" style="font-size:10px;padding:4px 8px;color:var(--alto);border-color:var(--alto)" onclick="desativarColaborador('${c.id}')">Remover</button>
+          </div>
+        `).join('') || '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Nenhum colaborador.</p>'}
+      </div>
+    </div>
+
+    <div class="s-card" style="margin-bottom:24px">
+      <div class="s-titulo" style="margin-bottom:4px">Heatmap de Burnout por Setor</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:16px">Índice Maslach por área da empresa</div>
+      <div id="heatmap-admin-${empresaId}">Carregando...</div>
+    </div>
+
+    <div class="s-card">
+      <div class="s-titulo" style="margin-bottom:4px">Convites enviados</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:16px">Últimos 10</div>
+      ${convites?.map(c => `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--neutro2);font-size:12px">
+          <span style="color:var(--ink)">${c.email}</span>
+          <span class="ri-score ${c.status === 'aceito' ? 'rs-baixo' : 'rs-medio'}">${c.status}</span>
+        </div>
+      `).join('') || '<p style="font-size:12px;color:var(--ink2);padding:12px 0">Nenhum convite.</p>'}
+    </div>
+  `;
+
+  renderHeatmapBurnout(empresaId, 'heatmap-admin-' + empresaId);
+}
+
+async function salvarEmpresaAdmin(empresaId) {
+  var nome  = document.getElementById('admin-nome-empresa').value.trim();
+  var cnpj  = document.getElementById('admin-cnpj').value.trim();
+  var plano = document.getElementById('admin-plano').value;
+  await sb.from('empresas').update({ nome_empresa: nome, cnpj, plano }).eq('id', empresaId);
+  alert('Empresa atualizada com sucesso!');
+}
+
+async function toggleEmpresaStatus(empresaId, ativo) {
+  if (!confirm(ativo ? 'Suspender esta empresa?' : 'Reativar esta empresa?')) return;
+  await sb.from('empresas').update({ ativo: !ativo }).eq('id', empresaId);
+  renderAdminDashboard();
+}
+
+async function desativarColaborador(perfilId) {
+  if (!confirm('Remover este colaborador?')) return;
+  await sb.from('perfis').delete().eq('id', perfilId);
+  alert('Colaborador removido.');
+}
+
+function abrirModalNovaEmpresa() {
+  document.getElementById('modal-nova-empresa').style.display = 'flex';
+}
+
+function fecharModalNovaEmpresa() {
+  document.getElementById('modal-nova-empresa').style.display = 'none';
+}
+
+async function criarNovaEmpresa() {
+  var nome  = document.getElementById('nova-empresa-nome').value.trim();
+  var cnpj  = document.getElementById('nova-empresa-cnpj').value.trim();
+  var email = document.getElementById('nova-empresa-email').value.trim();
+  var plano = document.getElementById('nova-empresa-plano').value;
+
+  if (!nome || !email) { alert('Nome e e-mail do gestor são obrigatórios.'); return; }
+
+  var btn = document.getElementById('btn-criar-empresa');
+  btn.disabled = true;
+  btn.textContent = 'Criando...';
+
+  var { data: empresaData, error: empErr } = await sb.from('empresas').insert({
+    nome_empresa: nome, cnpj: cnpj || null, plano, ativo: true
+  }).select().single();
+
+  if (empErr) { alert('Erro ao criar empresa: ' + empErr.message); btn.disabled = false; btn.textContent = 'Criar empresa'; return; }
+
+  var { data: session } = await sb.auth.getSession();
+  var token = session?.session?.access_token;
+  var resp = await fetch(EDGE_FUNCTION_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ email, nome: nome + ' — Gestor', empresa_id: empresaData.id, empresa_nome: nome, tipo_usuario: 'gestor' })
+  });
+
+  fecharModalNovaEmpresa();
+  btn.disabled = false;
+  btn.textContent = 'Criar empresa';
+
+  if (resp.ok) {
+    alert('Empresa criada! Convite enviado para ' + email);
+  } else {
+    alert('Empresa criada, mas erro ao enviar convite. Envie manualmente em Configurações.');
+  }
+
+  renderAdminDashboard();
+}
+
+// ── Gestão de Conteúdo no Admin ──────────────────────────────────
+async function renderAdminConteudo() {
+  var sec = document.getElementById('admin-content');
+  sec.innerHTML = '<div class="loading">Carregando conteúdos...</div>';
+
+  var { data: conteudos } = await sb.from('conteudos').select('*').order('trilha_id').order('modulo_ordem');
+
+  var nomesTrilhas = {
+    1:'Gestão de Demanda', 2:'Prevenção de Exaustão', 3:'Segurança Psicológica',
+    4:'Liderança sob Pressão', 5:'Clareza Operacional', 6:'Comunicação Assertiva',
+    7:'Regulação Emocional', 8:'Gestão de Rotina', 9:'Reconhecimento e Autonomia'
+  };
+
+  var porTrilha = {};
+  if (conteudos) {
+    conteudos.forEach(function(c) {
+      var tid = c.trilha_id || 0;
+      if (!porTrilha[tid]) porTrilha[tid] = [];
+      porTrilha[tid].push(c);
+    });
+  }
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">' +
+    '<div><div class="s-titulo">Gestão de conteúdo</div><div style="font-size:12px;color:var(--ink2);margin-top:4px">' + (conteudos?.length || 0) + ' módulos cadastrados</div></div>' +
+    '<button class="btn-pri" onclick="abrirModalNovoModulo()">+ Novo módulo</button>' +
+  '</div>';
+
+  Object.keys(porTrilha).sort().forEach(function(tid) {
+    var modulos = porTrilha[tid];
+    html += '<div class="s-card" style="margin-bottom:12px">' +
+      '<div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:12px">' +
+        (nomesTrilhas[tid] || 'Trilha ' + tid) + ' <span style="font-size:11px;color:var(--ink2);font-weight:400">— ' + modulos.length + ' módulos</span>' +
+      '</div>' +
+      modulos.map(function(m) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--neutro2)">' +
+          '<div>' +
+            '<div style="font-size:13px;color:var(--ink)">' + m.titulo + '</div>' +
+            '<div style="font-size:11px;color:var(--ink2)">Módulo ' + (m.modulo_ordem || '—') + ' · ' + (m.tempo_estimado || 5) + ' min · ' + (m.tipo_conteudo || 'artigo') + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px">' +
+            '<span class="ri-score ' + (m.ativo ? 'rs-baixo' : 'rs-alto') + '" style="font-size:10px">' + (m.ativo ? 'Ativo' : 'Inativo') + '</span>' +
+            '<button class="btn-sec" style="font-size:10px;padding:4px 8px" onclick="editarModulo(' + JSON.stringify({id:m.id,titulo:m.titulo,trilha_id:m.trilha_id,modulo_ordem:m.modulo_ordem,tempo_estimado:m.tempo_estimado,tipo_conteudo:m.tipo_conteudo,ativo:m.ativo}).replace(/"/g,"&quot;") + ')">Editar</button>' +
+            '<button class="btn-sec" style="font-size:10px;padding:4px 8px;color:var(--alto);border-color:var(--alto)" onclick="toggleModuloStatus(' + "'" + m.id + "'" + ',' + m.ativo + ')">'+  (m.ativo ? 'Desativar' : 'Ativar') + '</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  });
+
+  html += '<div id="modal-novo-modulo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">' +
+    '<div style="background:var(--branco);border-radius:16px;padding:32px;width:500px;max-width:90vw;max-height:90vh;overflow-y:auto">' +
+      '<div class="s-titulo" style="margin-bottom:20px" id="modal-modulo-titulo">Novo módulo</div>' +
+      '<input type="hidden" id="modulo-edit-id">' +
+      '<label class="lbl">Trilha</label>' +
+      '<select class="inp" id="modulo-trilha" style="height:48px">' +
+        Object.keys(nomesTrilhas).map(function(k) { return '<option value="' + k + '">' + nomesTrilhas[k] + '</option>'; }).join('') +
+      '</select>' +
+      '<label class="lbl">Título do módulo</label>' +
+      '<input type="text" class="inp" id="modulo-titulo" placeholder="Título do módulo">' +
+      '<label class="lbl">Ordem do módulo</label>' +
+      '<input type="number" class="inp" id="modulo-ordem" placeholder="1, 2, 3..." min="1">' +
+      '<label class="lbl">Tempo estimado (minutos)</label>' +
+      '<input type="number" class="inp" id="modulo-tempo" placeholder="5" min="1">' +
+      '<label class="lbl">Tipo de conteúdo</label>' +
+      '<select class="inp" id="modulo-tipo" style="height:48px"><option value="artigo">Artigo</option><option value="video">Vídeo</option><option value="audio">Áudio</option></select>' +
+      '<label class="lbl">Conteúdo (texto)</label>' +
+      '<textarea id="modulo-conteudo" style="width:100%;min-height:160px;border:1.5px solid var(--neutro2);border-radius:8px;padding:12px;font-family:DM Sans,sans-serif;font-size:14px;color:var(--ink);resize:vertical;outline:none" placeholder="Texto completo do módulo..."></textarea>' +
+      '<label class="lbl" style="margin-top:12px">URL de vídeo/áudio (opcional)</label>' +
+      '<input type="text" class="inp" id="modulo-url" placeholder="https://...">' +
+      '<div style="display:flex;gap:12px;margin-top:16px">' +
+        '<button class="btn-sec" style="flex:1" onclick="fecharModalNovoModulo()">Cancelar</button>' +
+        '<button class="btn-pri" style="flex:1" id="btn-salvar-modulo" onclick="salvarModulo()">Salvar módulo</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  sec.innerHTML = html;
+}
+
+function abrirModalNovoModulo() {
+  document.getElementById('modal-modulo-titulo').textContent = 'Novo módulo';
+  document.getElementById('modulo-edit-id').value = '';
+  document.getElementById('modulo-titulo').value = '';
+  document.getElementById('modulo-ordem').value = '';
+  document.getElementById('modulo-tempo').value = '5';
+  document.getElementById('modulo-conteudo').value = '';
+  document.getElementById('modulo-url').value = '';
+  document.getElementById('modal-novo-modulo').style.display = 'flex';
+}
+
+function editarModulo(m) {
+  document.getElementById('modal-modulo-titulo').textContent = 'Editar módulo';
+  document.getElementById('modulo-edit-id').value = m.id;
+  document.getElementById('modulo-trilha').value = m.trilha_id;
+  document.getElementById('modulo-titulo').value = m.titulo;
+  document.getElementById('modulo-ordem').value = m.modulo_ordem;
+  document.getElementById('modulo-tempo').value = m.tempo_estimado;
+  document.getElementById('modulo-tipo').value = m.tipo_conteudo;
+  document.getElementById('modal-novo-modulo').style.display = 'flex';
+}
+
+function fecharModalNovoModulo() {
+  document.getElementById('modal-novo-modulo').style.display = 'none';
+}
+
+async function salvarModulo() {
+  var editId  = document.getElementById('modulo-edit-id').value;
+  var dados = {
+    trilha_id:       parseInt(document.getElementById('modulo-trilha').value),
+    titulo:          document.getElementById('modulo-titulo').value.trim(),
+    modulo_ordem:    parseInt(document.getElementById('modulo-ordem').value),
+    tempo_estimado:  parseInt(document.getElementById('modulo-tempo').value) || 5,
+    tipo_conteudo:   document.getElementById('modulo-tipo').value,
+    conteudo_texto:  document.getElementById('modulo-conteudo').value.trim(),
+    url_conteudo:    document.getElementById('modulo-url').value.trim() || null,
+    ativo:           true,
+    categoria:       document.getElementById('modulo-trilha').options[document.getElementById('modulo-trilha').selectedIndex].text,
+    emoji:           '📋',
+    cor_capa:        '#1B3A34'
+  };
+
+  if (!dados.titulo) { alert('Título obrigatório.'); return; }
+
+  if (editId) {
+    await sb.from('conteudos').update(dados).eq('id', editId);
+  } else {
+    await sb.from('conteudos').insert(dados);
+  }
+
+  fecharModalNovoModulo();
+  renderAdminConteudo();
+}
+
+async function toggleModuloStatus(id, ativo) {
+  await sb.from('conteudos').update({ ativo: !ativo }).eq('id', id);
+  renderAdminConteudo();
+}
+
 </script>
+
+<!-- TELA ADMIN -->
+<div id="tela-admin" class="tela">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="s-logo">SENTIO <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:inline-block;vertical-align:middle;margin-left:4px;margin-bottom:2px"><circle cx="7" cy="7" r="6" stroke="#B0894A" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="#B0894A"/></svg></div>
+      <div class="s-tag" style="color:var(--dourado)">Super Admin</div>
+      <div class="s-div"></div>
+      <nav class="s-nav">
+        <div class="nav-item on" onclick="adminNavegar('dashboard',this)"><span class="nav-ic">⊞</span> Dashboard</div>
+        <div class="nav-item" onclick="adminNavegar('conteudo',this)"><span class="nav-ic">☰</span> Conteúdo</div>
+        <div class="nav-item" style="margin-top:8px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
+      </nav>
+      <div class="s-footer">
+        <div class="s-user">
+          <div class="u-av" style="background:var(--dourado)">D</div>
+          <div><div class="u-nome">Denis Vasques</div><div class="u-cargo" style="color:var(--dourado)">Super Admin</div></div>
+        </div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="m-header"><div class="m-h-esq"><h1 id="admin-titulo">Admin</h1><p>Painel de controle Sentio</p></div></div>
+      <div id="admin-content" class="m-content"></div>
+    </main>
+  </div>
+</div>
+
+<div id="modal-nova-empresa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--branco);border-radius:16px;padding:32px;width:480px;max-width:90vw">
+    <div class="s-titulo" style="margin-bottom:20px">Nova empresa</div>
+    <label class="lbl">Nome da empresa</label>
+    <input type="text" class="inp" id="nova-empresa-nome" placeholder="Empresa LTDA">
+    <label class="lbl">CNPJ (opcional)</label>
+    <input type="text" class="inp" id="nova-empresa-cnpj" placeholder="00.000.000/0001-00">
+    <label class="lbl">E-mail do gestor</label>
+    <input type="email" class="inp" id="nova-empresa-email" placeholder="gestor@empresa.com.br">
+    <label class="lbl">Plano</label>
+    <select class="inp" id="nova-empresa-plano" style="height:48px"><option value="free">Free</option><option value="profissional">Profissional</option><option value="enterprise">Enterprise</option></select>
+    <div style="display:flex;gap:12px;margin-top:16px">
+      <button class="btn-sec" style="flex:1" onclick="fecharModalNovaEmpresa()">Cancelar</button>
+      <button class="btn-pri" style="flex:1" id="btn-criar-empresa" onclick="criarNovaEmpresa()">Criar empresa</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
