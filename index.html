@@ -233,6 +233,7 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
         </div>
         <div class="nav-item" onclick="navegarGestor('relatorio',this)"><span class="nav-ic">▦</span> Relatório IA</div>
         <div class="nav-item" onclick="navegarGestor('configuracoes',this)"><span class="nav-ic">⚙</span> Configurações</div>
+        <div class="nav-item" onclick="exibirDireitosLGPD()"><span class="nav-ic">🔒</span> Meus dados</div>
         <div class="nav-item" style="margin-top:8px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
       </nav>
       <div class="s-footer">
@@ -276,6 +277,7 @@ body{font-family:'Inter',sans-serif;font-weight:300;background:var(--neutro);col
         <div class="nav-item" onclick="navegarColab('diagnostico',this)"><span class="nav-ic">◎</span> Meu diagnóstico</div>
         <div class="nav-item" onclick="navegarColab('sessoes',this)"><span class="nav-ic">◇</span> Minhas sessões</div>
         <div class="nav-item" onclick="navegarColab('conteudos',this)"><span class="nav-ic">☰</span> Conteúdos</div>
+        <div class="nav-item" onclick="exibirDireitosLGPD()"><span class="nav-ic">🔒</span> Meus dados</div>
         <div class="nav-item" style="margin-top:8px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
       </nav>
       <div class="s-footer">
@@ -1621,6 +1623,14 @@ async function iniciarDiagnostico() {
   document.getElementById('sec-colab-diag').style.display = 'block';
   document.getElementById('diag-result-area').style.display = 'none';
   document.getElementById('diag-form-area').style.display = 'block';
+  // Verificar consentimento LGPD antes de iniciar
+  await exibirTermoConsentimento(async function() {
+    await _iniciarDiagnosticoReal();
+  });
+}
+
+async function _iniciarDiagnosticoReal() {
+  document.getElementById('diag-form-area').innerHTML = '<p style="color:var(--ink2);text-align:center;padding:40px">Carregando...</p>';
   if (perguntas.length === 0) {
     const { data } = await sb.from('perguntas_diagnostico').select('*').eq('ativa', true).order('ordem');
     perguntas = data || [];
@@ -2222,6 +2232,319 @@ function exportarRelatorioPDF(dados) {
     alert('Arquivo baixado! Abra no navegador e use Ctrl+P para salvar como PDF.');
   }
 }
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO LGPD — SENTIO
+// Termo de consentimento, política de privacidade,
+// registro de aceite e direitos do titular
+// ══════════════════════════════════════════════════════════════════
+
+const VERSAO_TERMO = '1.0';
+const DATA_TERMO   = '21 de maio de 2026';
+
+// ── Verificar se colaborador já aceitou o termo ───────────────────
+async function verificarConsentimento() {
+  if (!perfil?.id) return false;
+  const { data } = await sb.from('consentimentos_lgpd')
+    .select('id')
+    .eq('colaborador_id', perfil.id)
+    .eq('versao_termo', VERSAO_TERMO)
+    .eq('aceito', true)
+    .single();
+  return !!data;
+}
+
+// ── Exibir termo de consentimento antes do diagnóstico ────────────
+async function exibirTermoConsentimento(callback) {
+  const jaAceitou = await verificarConsentimento();
+  if (jaAceitou) { callback(); return; }
+
+  const el = document.getElementById('diag-form-area');
+  el.innerHTML = `
+    <div style="max-width:640px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:36px;margin-bottom:12px">🔒</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--ink)">Antes de começar</div>
+        <div style="font-size:13px;color:var(--ink2);margin-top:6px">Precisamos do seu consentimento para processar seus dados</div>
+      </div>
+
+      <div style="background:var(--branco);border:1.5px solid var(--neutro2);border-radius:16px;padding:28px;margin-bottom:20px;max-height:340px;overflow-y:auto">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dourado);margin-bottom:12px">Termo de consentimento · Versão ${VERSAO_TERMO} · ${DATA_TERMO}</div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">1. Quem somos</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px">
+          A plataforma Sentio é operada pela empresa contratante e disponibilizada para seus colaboradores como ferramenta de gestão de saúde psicossocial no trabalho, em conformidade com a NR-01 e a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
+        </div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">2. Quais dados coletamos</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px">
+          Coletamos suas respostas ao questionário psicossocial, dados de perfil profissional (nome, cargo, setor) e informações de uso da plataforma. Não coletamos dados de saúde identificáveis individualmente.
+        </div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">3. Como usamos seus dados</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px">
+          Seus dados são usados para: gerar seu diagnóstico psicossocial individual, recomendar trilhas de desenvolvimento, produzir relatórios agregados e anônimos para a gestão da empresa, e cumprir obrigações legais previstas na NR-01.
+        </div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">4. Sigilo e anonimização</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px">
+          <strong>Seus gestores e o RH não têm acesso às suas respostas individuais.</strong> Os relatórios entregues à empresa apresentam apenas dados agregados por setor ou equipe, nunca informações identificáveis de colaboradores individuais.
+        </div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">5. Seus direitos (LGPD · Art. 18)</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px">
+          Você tem direito a: confirmar a existência de tratamento dos seus dados, acessar seus dados, corrigir dados incompletos ou desatualizados, solicitar anonimização ou exclusão dos dados, revogar este consentimento a qualquer momento e solicitar portabilidade dos dados.
+        </div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">6. Base legal</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px">
+          O tratamento dos dados tem como base legal o consentimento do titular (Art. 7º, I, LGPD) e o cumprimento de obrigação legal relativa à gestão de riscos ocupacionais (Art. 7º, II, LGPD — NR-01).
+        </div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">7. Retenção dos dados</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:16px">
+          Seus dados são mantidos pelo período necessário para cumprimento das obrigações legais (mínimo 5 anos conforme NR-01) ou até solicitação de exclusão pelo titular, o que vier depois.
+        </div>
+
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:8px">8. Contato</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7">
+          Para exercer seus direitos ou obter informações, entre em contato com o RH da sua empresa ou com o encarregado de dados (DPO) indicado pela organização.
+        </div>
+      </div>
+
+      <div style="background:rgba(27,58,52,.05);border-radius:12px;padding:16px 20px;margin-bottom:20px;border-left:4px solid var(--verde)">
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:4px">Resumo em linguagem simples</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.6">
+          Suas respostas são <strong>sigilosas</strong>. Seu gestor <strong>não vê</strong> o que você respondeu individualmente. Os dados são usados para melhorar o ambiente de trabalho da empresa como um todo. Você pode <strong>pedir a exclusão dos seus dados</strong> a qualquer momento.
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:24px;padding:16px;background:var(--branco);border:1.5px solid var(--neutro2);border-radius:12px;cursor:pointer" onclick="toggleAceite(this)">
+        <div id="check-aceite" style="width:20px;height:20px;border-radius:4px;border:1.5px solid var(--neutro2);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s;background:var(--branco)"></div>
+        <div style="font-size:13px;color:var(--ink);line-height:1.6">
+          Li e concordo com o Termo de Consentimento e a Política de Privacidade da plataforma Sentio. Autorizo o tratamento dos meus dados pessoais conforme descrito acima.
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <button class="btn-sec" style="flex:1" onclick="navegarColab('home',null)">Voltar</button>
+        <button class="btn-p" id="btn-aceitar" style="flex:2;opacity:.4;cursor:not-allowed" disabled onclick="aceitarTermo(function(){ ${callback.toString().replace(/"/g,"'")} })">
+          Aceitar e iniciar diagnóstico →
+        </button>
+      </div>
+
+      <div style="text-align:center;margin-top:16px">
+        <span style="font-size:11px;color:var(--ink2);cursor:pointer;text-decoration:underline" onclick="exibirPoliticaPrivacidade()">Ver política de privacidade completa</span>
+      </div>
+    </div>
+  `;
+
+  window._lgpdCallback = callback;
+}
+
+function toggleAceite(el) {
+  const check = document.getElementById('check-aceite');
+  const btn   = document.getElementById('btn-aceitar');
+  const marcado = check.dataset.marcado === 'true';
+
+  if (!marcado) {
+    check.dataset.marcado = 'true';
+    check.style.background = 'var(--verde)';
+    check.style.borderColor = 'var(--verde)';
+    check.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  } else {
+    check.dataset.marcado = 'false';
+    check.style.background = 'var(--branco)';
+    check.style.borderColor = 'var(--neutro2)';
+    check.innerHTML = '';
+    btn.disabled = true;
+    btn.style.opacity = '.4';
+    btn.style.cursor = 'not-allowed';
+  }
+}
+
+async function aceitarTermo(callback) {
+  if (!perfil?.id) return;
+
+  await sb.from('consentimentos_lgpd').insert({
+    colaborador_id: perfil.id,
+    empresa_id:     perfil.empresa_id,
+    versao_termo:   VERSAO_TERMO,
+    aceito:         true,
+    data_aceite:    new Date().toISOString(),
+    texto_termo:    'Termo de Consentimento Sentio v' + VERSAO_TERMO
+  });
+
+  if (window._lgpdCallback) window._lgpdCallback();
+}
+
+// ── Política de privacidade completa ─────────────────────────────
+function exibirPoliticaPrivacidade() {
+  const el = document.getElementById('diag-form-area');
+  const conteudoAnterior = el.innerHTML;
+
+  el.innerHTML = `
+    <div style="max-width:640px;margin:0 auto">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <button class="btn-sec" style="font-size:12px" onclick="document.getElementById('diag-form-area').innerHTML = \`${conteudoAnterior.replace(/`/g, '\\`')}\`">← Voltar</button>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--ink)">Política de Privacidade</div>
+      </div>
+
+      <div style="background:var(--branco);border:1.5px solid var(--neutro2);border-radius:16px;padding:28px">
+        <div style="font-size:11px;color:var(--ink2);margin-bottom:20px">Última atualização: ${DATA_TERMO} · Versão ${VERSAO_TERMO}</div>
+
+        ${[
+          ['Controlador dos dados', 'A empresa contratante da plataforma Sentio atua como controladora dos dados pessoais de seus colaboradores. A Sentio atua como operadora, processando os dados conforme as instruções da controladora e nos limites estabelecidos nesta política.'],
+          ['Dados coletados', 'Nome completo e e-mail profissional. Cargo, setor e empresa. Respostas ao questionário psicossocial (EACT). Data e horário de acesso. Progresso nas trilhas de desenvolvimento. Registro de consentimento com data e versão do termo aceito.'],
+          ['Finalidade do tratamento', 'Geração de diagnóstico psicossocial individual sigiloso. Recomendação personalizada de trilhas de desenvolvimento. Produção de relatórios agregados e anônimos para conformidade com NR-01. Monitoramento de evolução do ambiente de trabalho. Cumprimento de obrigações legais trabalhistas.'],
+          ['Anonimização e sigilo', 'As respostas individuais ao questionário são armazenadas de forma criptografada. Os relatórios entregues à gestão apresentam exclusivamente dados agregados por setor, nunca dados identificáveis de colaboradores individuais. Nenhum gestor ou representante do RH tem acesso às respostas individuais de colaboradores.'],
+          ['Compartilhamento de dados', 'Os dados não são compartilhados com terceiros, exceto: fornecedores de infraestrutura tecnológica (Supabase — armazenamento seguro em conformidade com LGPD), e quando exigido por autoridade competente mediante ordem judicial.'],
+          ['Segurança', 'Os dados são armazenados com criptografia em repouso e em trânsito. O acesso é controlado por autenticação e autorização por perfil de usuário. Logs de acesso são mantidos para trilha de auditoria.'],
+          ['Retenção', 'Dados de diagnóstico e consentimento: mínimo 5 anos (exigência NR-01). Dados de acesso: 1 ano. Após o prazo, os dados são anonimizados ou excluídos, salvo obrigação legal que exija retenção por período maior.'],
+          ['Direitos do titular (LGPD Art. 18)', 'Acesso: solicitar cópia dos seus dados. Correção: atualizar dados incompletos ou incorretos. Anonimização ou exclusão: solicitar a remoção dos dados desnecessários. Portabilidade: receber seus dados em formato estruturado. Revogação: retirar o consentimento a qualquer momento. Informação: saber com quais entidades seus dados foram compartilhados.'],
+          ['Como exercer seus direitos', 'Entre em contato com o RH da sua empresa ou acesse a seção "Meus dados" no seu perfil na plataforma. Solicitações serão respondidas em até 15 dias úteis, conforme previsto na LGPD.'],
+          ['Alterações nesta política', 'Eventuais alterações serão comunicadas por e-mail e exigirão novo consentimento do titular antes do próximo diagnóstico.']
+        ].map(([titulo, texto]) => `
+          <div style="margin-bottom:20px">
+            <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px">${titulo}</div>
+            <div style="font-size:13px;color:var(--ink2);line-height:1.7">${texto}</div>
+          </div>
+        `).join('<div style="height:1px;background:var(--neutro2);margin-bottom:20px"></div>')}
+      </div>
+    </div>
+  `;
+}
+
+// ── Painel de direitos LGPD do colaborador ────────────────────────
+async function exibirDireitosLGPD() {
+  const el = document.getElementById('sec-colab-home');
+  if (!el || !perfil?.id) return;
+
+  const { data: diags } = await sb.from('diagnosticos')
+    .select('id,created_at,status,score_total,nivel_risco')
+    .eq('colaborador_id', perfil.id)
+    .order('created_at', { ascending: false });
+
+  const { data: consents } = await sb.from('consentimentos_lgpd')
+    .select('*').eq('colaborador_id', perfil.id)
+    .order('created_at', { ascending: false }).limit(1);
+
+  const ultimoConsent = consents?.[0];
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <button class="btn-sec" style="font-size:12px" onclick="abrirHomeColaborador()">← Voltar</button>
+      <div>
+        <div class="s-titulo">Meus dados · LGPD</div>
+        <div style="font-size:12px;color:var(--ink2);margin-top:2px">Seus direitos como titular de dados pessoais</div>
+      </div>
+    </div>
+
+    <div class="secoes" style="margin-bottom:24px">
+      <div class="s-card">
+        <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:16px">Dados que temos sobre você</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.8">
+          Nome: <strong style="color:var(--ink)">${perfil.nome || '—'}</strong><br>
+          E-mail: <strong style="color:var(--ink)">${perfil.email || '—'}</strong><br>
+          Cargo: <strong style="color:var(--ink)">${perfil.cargo || '—'}</strong><br>
+          Setor: <strong style="color:var(--ink)">${perfil.setor || '—'}</strong><br>
+          Diagnósticos: <strong style="color:var(--ink)">${diags?.length || 0}</strong><br>
+          Consentimento: <strong style="color:var(--verde)">${ultimoConsent ? 'Aceito em ' + new Date(ultimoConsent.data_aceite).toLocaleDateString('pt-BR') : 'Não registrado'}</strong>
+        </div>
+      </div>
+
+      <div class="s-card">
+        <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:16px">Seus direitos</div>
+        ${[
+          { icone: '📋', titulo: 'Ver meus dados', desc: 'Você está vendo agora', acao: null },
+          { icone: '📤', titulo: 'Exportar meus dados', desc: 'Baixar em formato JSON', acao: 'exportarDadosPessoais()' },
+          { icone: '🗑️', titulo: 'Solicitar exclusão', desc: 'Remover dados não obrigatórios', acao: 'solicitarExclusao()' },
+          { icone: '↩️', titulo: 'Revogar consentimento', desc: 'Parar de participar', acao: 'revogarConsentimento()' }
+        ].map(d => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--neutro2)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px">${d.icone}</span>
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--ink)">${d.titulo}</div>
+                <div style="font-size:11px;color:var(--ink2)">${d.desc}</div>
+              </div>
+            </div>
+            ${d.acao ? `<button class="btn-sec" style="font-size:11px;padding:6px 12px" onclick="${d.acao}">${d.titulo.split(' ')[0]}</button>` : '<span class="tag-verde" style="font-size:10px">Ativo</span>'}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="s-card">
+      <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:16px">Histórico de diagnósticos</div>
+      ${diags && diags.length > 0 ? diags.map(d => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--neutro2)">
+          <div>
+            <div style="font-size:13px;color:var(--ink)">${new Date(d.created_at).toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' })}</div>
+            <div style="font-size:11px;color:var(--ink2)">Status: ${d.status} · Score: ${d.score_total || '--'}</div>
+          </div>
+          <span class="ri-score ${d.nivel_risco === 'baixo' ? 'rs-baixo' : d.nivel_risco === 'medio' ? 'rs-medio' : 'rs-alto'}">${d.nivel_risco || '--'}</span>
+        </div>
+      `).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Nenhum diagnóstico realizado ainda.</p>'}
+    </div>
+  `;
+}
+
+async function exportarDadosPessoais() {
+  const { data: diags } = await sb.from('diagnosticos').select('*').eq('colaborador_id', perfil.id);
+  const { data: prog  } = await sb.from('progresso_trilhas').select('*').eq('colaborador_id', perfil.id);
+  const { data: cons  } = await sb.from('consentimentos_lgpd').select('*').eq('colaborador_id', perfil.id);
+
+  const dados = {
+    exportado_em: new Date().toISOString(),
+    titular: { nome: perfil.nome, email: perfil.email, cargo: perfil.cargo, setor: perfil.setor },
+    consentimentos: cons || [],
+    diagnosticos: (diags || []).map(function(d) {
+      return {
+        data: d.created_at, status: d.status,
+        score_total: d.score_total, nivel_risco: d.nivel_risco,
+        score_organizacao: d.score_organizacao, score_condicoes: d.score_condicoes,
+        score_relacoes: d.score_relacoes, score_reconhecimento: d.score_reconhecimento,
+        score_elo: d.score_elo
+      };
+    }),
+    progresso_trilhas: prog || []
+  };
+
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'meus-dados-sentio-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  alert('Seus dados foram exportados com sucesso.');
+}
+
+async function revogarConsentimento() {
+  if (!confirm('Ao revogar o consentimento, você não poderá realizar novos diagnósticos. Seus dados históricos serão mantidos pelo prazo legal (5 anos - NR-01). Deseja continuar?')) return;
+  await sb.from('consentimentos_lgpd').update({ aceito: false, data_revogacao: new Date().toISOString() })
+    .eq('colaborador_id', perfil.id).eq('versao_termo', VERSAO_TERMO);
+  alert('Consentimento revogado. Você ainda pode acessar a plataforma e seus dados históricos.');
+  abrirHomeColaborador();
+}
+
+async function solicitarExclusao() {
+  if (!confirm('Solicitar exclusão dos dados que não são obrigatórios por lei. Os dados de diagnóstico são mantidos por 5 anos (NR-01). Demais dados serão marcados para exclusão em até 15 dias úteis. Confirma?')) return;
+  await sb.from('solicitacoes_lgpd').insert({
+    colaborador_id: perfil.id,
+    empresa_id:     perfil.empresa_id,
+    tipo:           'exclusao',
+    status:         'pendente',
+    created_at:     new Date().toISOString()
+  });
+  alert('Solicitação registrada. O RH será notificado e responderá em até 15 dias úteis conforme a LGPD.');
+}
+
 </script>
 </body>
 </html>
