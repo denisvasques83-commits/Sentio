@@ -484,12 +484,12 @@ async function abrirDashboardGestor() {
 async function renderDashboard() {
   const empresaId = perfil?.empresa_id;
   let totalColab = 0, totalDiag = 0, mediaScore = 0, baixo = 0, medio = 0, alto = 0;
+  let diags = [];
   if (empresaId) {
     const { data: colabs } = await sb.from('perfis').select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador');
     totalColab = colabs?.length || 0;
     // Buscar só diagnósticos de colaboradores (não gestores)
     const idColabs = colabs?.map(c => c.id) || [];
-    let diags = [];
     if (idColabs.length > 0) {
       const { data: diagsData } = await sb.from('diagnosticos').select('*')
         .eq('empresa_id', empresaId).eq('status', 'completo')
@@ -3553,6 +3553,14 @@ async function salvarModulo() {
 async function toggleModuloStatus(id, ativo) {
   await sb.from('conteudos').update({ ativo: !ativo }).eq('id', id);
   renderAdminConteudo();
+}
+
+function adminNavegar(secao, el) {
+  document.querySelectorAll('#tela-admin .nav-item').forEach(function(n) { n.classList.remove('on'); });
+  if (el) el.classList.add('on');
+  document.getElementById('admin-titulo').textContent = secao === 'dashboard' ? 'Admin' : 'Conteúdo';
+  if (secao === 'dashboard') renderAdminDashboard();
+  else if (secao === 'conteudo') renderAdminConteudo();
 }
 
 </script>
