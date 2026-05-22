@@ -1083,21 +1083,46 @@ async function abrirModuloConteudo(moduloId, trilhaId) {
   var { data: m } = await sb.from('conteudos').select('*').eq('id', moduloId).single();
   if (!m) return;
 
-  el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">' +
-    '<button class="btn-sec" style="font-size:12px" onclick="abrirTrilhaPorId(' + trilhaId + ')">← Voltar à trilha</button>' +
-  '</div>' +
-  '<div class="s-card" style="max-width:680px">' +
-    '<div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dourado);margin-bottom:8px">' + (m.categoria || '') + ' · Módulo ' + (m.modulo_ordem || '') + '</div>' +
-    '<div style="font-family:Cormorant Garamond,serif;font-size:24px;font-weight:600;color:var(--ink);margin-bottom:16px;line-height:1.3">' + m.titulo + '</div>' +
-    '<div style="font-size:13px;color:var(--ink2);margin-bottom:24px;display:flex;gap:16px">' +
-      '<span>⏱ ' + (m.tempo_estimado || 5) + ' min</span>' +
-      '<span>📄 ' + (m.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</span>' +
-    '</div>' +
-    '<div style="font-size:14px;color:var(--ink);line-height:1.8;white-space:pre-line">' + (m.conteudo_texto || 'Conteúdo em breve.') + '</div>' +
-    '<div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--neutro2);text-align:center">' +
-      '<button class="btn-p" onclick="marcarModuloConcluido(' + moduloId + ',' + trilhaId + ')">Marcar como concluído ✓</button>' +
-    '</div>' +
-  '</div>';
+  // Usar DOM seguro para evitar quebra com caracteres especiais no conteúdo
+  var wrapper = document.createElement('div');
+
+  var btnVoltar = document.createElement('div');
+  btnVoltar.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:24px';
+  btnVoltar.innerHTML = '<button class="btn-sec" style="font-size:12px" onclick="abrirTrilhaPorId(' + trilhaId + ')">← Voltar à trilha</button>';
+  wrapper.appendChild(btnVoltar);
+
+  var card = document.createElement('div');
+  card.className = 's-card';
+  card.style.maxWidth = '680px';
+
+  var catEl = document.createElement('div');
+  catEl.style.cssText = 'font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--dourado);margin-bottom:8px';
+  catEl.textContent = (m.categoria || '') + ' · Módulo ' + (m.modulo_ordem || '');
+  card.appendChild(catEl);
+
+  var tituloEl = document.createElement('div');
+  tituloEl.style.cssText = 'font-family:Cormorant Garamond,serif;font-size:24px;font-weight:600;color:var(--ink);margin-bottom:16px;line-height:1.3';
+  tituloEl.textContent = m.titulo;
+  card.appendChild(tituloEl);
+
+  var metaEl = document.createElement('div');
+  metaEl.style.cssText = 'font-size:13px;color:var(--ink2);margin-bottom:24px;display:flex;gap:16px';
+  metaEl.innerHTML = '<span>⏱ ' + (m.tempo_estimado || 5) + ' min</span><span>📄 ' + (m.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</span>';
+  card.appendChild(metaEl);
+
+  var conteudoEl = document.createElement('div');
+  conteudoEl.style.cssText = 'font-size:14px;color:var(--ink);line-height:1.8;white-space:pre-line';
+  conteudoEl.textContent = m.conteudo_texto || 'Conteúdo em breve.';
+  card.appendChild(conteudoEl);
+
+  var rodapeEl = document.createElement('div');
+  rodapeEl.style.cssText = 'margin-top:32px;padding-top:24px;border-top:1px solid var(--neutro2);text-align:center';
+  rodapeEl.innerHTML = '<button class="btn-p" onclick="marcarModuloConcluido('' + moduloId + '',' + trilhaId + ')">Marcar como concluído ✓</button>';
+  card.appendChild(rodapeEl);
+
+  wrapper.appendChild(card);
+  el.innerHTML = '';
+  el.appendChild(wrapper);
 }
 
 // ── Marcar módulo como concluído e atualizar progresso ────────────
