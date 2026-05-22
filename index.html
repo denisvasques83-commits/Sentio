@@ -431,7 +431,7 @@ function navegarGestor(secao, el) {
   });
   const titulos = { dashboard:'Dashboard', sessoes:'Sessões', conteudos:'Conteúdos', alertas:'Alertas', relatorio:'Relatório IA', configuracoes:'Configurações' };
   document.getElementById('titulo-gestor').textContent = titulos[secao] || secao;
-  if (secao === 'configuracoes') renderSetores();
+  if (secao === 'configuracoes') renderConfiguracoes();
 }
 
 function navegarColab(secao, el) {
@@ -1860,6 +1860,10 @@ async function finalizarDiagnostico() {
 // MÓDULO: SETORES CONFIGURÁVEIS
 // ══════════════════════════════════════════════════════════════════
 
+async function renderConfiguracoes() {
+  await renderSetores();
+}
+
 async function renderSetores() {
   const empresaId = perfil?.empresa_id;
   const sec = document.getElementById('sec-configuracoes');
@@ -1877,7 +1881,10 @@ async function renderSetores() {
         <div class="s-titulo">Configurações da empresa</div>
         <div style="font-size:12px;color:var(--ink2);margin-top:4px">Setores e estrutura organizacional</div>
       </div>
-      <button class="btn-pri" onclick="abrirModalSetor()">+ Novo setor</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sec" onclick="renderConvites()">✉ Convidar colaboradores</button>
+        <button class="btn-pri" onclick="abrirModalSetor()">+ Novo setor</button>
+      </div>
     </div>
 
     <div class="secoes" style="margin-bottom:24px">
@@ -2633,6 +2640,177 @@ async function solicitarExclusao() {
     created_at:     new Date().toISOString()
   });
   alert('Solicitação registrada. O RH será notificado e responderá em até 15 dias úteis conforme a LGPD.');
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO: CONVITE DE COLABORADORES
+// ══════════════════════════════════════════════════════════════════
+
+const EDGE_FUNCTION_URL = 'https://jeuziyxwhggegfwnsbwj.supabase.co/functions/v1/convidar-colaborador';
+
+async function renderConvites() {
+  const empresaId = perfil?.empresa_id;
+  const sec = document.getElementById('sec-configuracoes');
+  if (!sec) return;
+
+  const { data: convites } = await sb.from('convites_colaboradores')
+    .select('*').eq('empresa_id', empresaId)
+    .order('created_at', { ascending: false }).limit(20);
+
+  const { data: setores } = await sb.from('setores_empresa')
+    .select('*').eq('empresa_id', empresaId).eq('ativo', true).order('nome');
+
+  sec.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="s-titulo">Convidar colaboradores</div>
+        <div style="font-size:12px;color:var(--ink2);margin-top:4px">Envie convites por e-mail — o colaborador define a própria senha</div>
+      </div>
+      <button class="btn-sec" style="font-size:12px" onclick="renderSetores()">← Configurações</button>
+    </div>
+
+    <div class="secoes" style="margin-bottom:24px">
+      <div class="s-card">
+        <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:16px">Novo convite</div>
+
+        <label class="lbl">E-mail corporativo</label>
+        <input type="email" class="inp" id="conv-email" placeholder="colaborador@empresa.com.br">
+
+        <label class="lbl">Nome (opcional)</label>
+        <input type="text" class="inp" id="conv-nome" placeholder="Nome completo">
+
+        <label class="lbl">Cargo (opcional)</label>
+        <input type="text" class="inp" id="conv-cargo" placeholder="Ex: Analista, Coordenador...">
+
+        <label class="lbl">Setor (opcional)</label>
+        <select class="inp" id="conv-setor" style="height:48px;cursor:pointer">
+          <option value="">Sem setor definido</option>
+          ${setores?.map(s => `<option value="${s.nome}">${s.nome}</option>`).join('') || ''}
+        </select>
+
+        <button class="btn-p" id="btn-convidar" onclick="enviarConvite()" style="width:100%;margin-top:8px">
+          Enviar convite →
+        </button>
+
+        <div id="conv-feedback" style="display:none;margin-top:12px;padding:12px 16px;border-radius:8px;font-size:13px"></div>
+      </div>
+
+      <div class="s-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:500;color:var(--ink)">Convites enviados</div>
+          <span class="tag-dourado">${convites?.length || 0} total</span>
+        </div>
+
+        ${convites && convites.length > 0 ? convites.map(c => {
+          const statusCor  = c.status === 'aceito' ? 'rs-baixo' : c.status === 'enviado' ? 'rs-medio' : 'rs-alto';
+          const statusLabel = c.status === 'aceito' ? 'Aceito' : c.status === 'enviado' ? 'Enviado' : 'Pendente';
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--neutro2)">
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--ink)">${c.email}</div>
+                <div style="font-size:11px;color:var(--ink2);margin-top:2px">
+                  ${c.nome ? c.nome + ' · ' : ''}${c.cargo || ''}${c.setor ? ' · ' + c.setor : ''}
+                </div>
+                <div style="font-size:10px;color:var(--ink2);margin-top:2px">
+                  ${c.enviado_em ? new Date(c.enviado_em).toLocaleDateString('pt-BR') : ''}
+                  ${c.aceito_em ? ' · Aceito em ' + new Date(c.aceito_em).toLocaleDateString('pt-BR') : ''}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="ri-score ${statusCor}" style="font-size:10px">${statusLabel}</span>
+                ${c.status !== 'aceito' ? `<button class="btn-sec" style="font-size:10px;padding:4px 8px" onclick="reenviarConvite('${c.email}','${c.nome||''}','${c.cargo||''}','${c.setor||''}')">Reenviar</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('') : '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Nenhum convite enviado ainda.</p>'}
+      </div>
+    </div>
+
+    <div class="s-card" style="background:rgba(27,58,52,.04);border-color:var(--verde)">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="font-size:20px;flex-shrink:0">💡</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.7">
+          O colaborador receberá um e-mail com um link de acesso. Ao clicar, ele define a própria senha e já entra direto na plataforma vinculado à sua empresa. As informações de nome, cargo e setor serão preenchidas automaticamente no perfil dele.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function enviarConvite() {
+  const email = document.getElementById('conv-email').value.trim();
+  const nome  = document.getElementById('conv-nome').value.trim();
+  const cargo = document.getElementById('conv-cargo').value.trim();
+  const setor = document.getElementById('conv-setor').value;
+  const btn   = document.getElementById('btn-convidar');
+  const fb    = document.getElementById('conv-feedback');
+
+  if (!email) { mostrarFeedback('Digite o e-mail do colaborador.', 'erro'); return; }
+  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { mostrarFeedback('E-mail inválido.', 'erro'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  fb.style.display = 'none';
+
+  try {
+    const { data: session } = await sb.auth.getSession();
+    const token = session?.session?.access_token;
+
+    const resp = await fetch(EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        email,
+        nome,
+        cargo,
+        setor,
+        empresa_id:   perfil.empresa_id,
+        empresa_nome: empresa?.nome_empresa || ''
+      })
+    });
+
+    const data = await resp.json();
+
+    if (resp.ok) {
+      mostrarFeedback('Convite enviado para ' + email + ' com sucesso!', 'ok');
+      document.getElementById('conv-email').value = '';
+      document.getElementById('conv-nome').value  = '';
+      document.getElementById('conv-cargo').value = '';
+      setTimeout(function() { renderConvites(); }, 1500);
+    } else {
+      mostrarFeedback(data.error || 'Erro ao enviar convite.', 'erro');
+    }
+  } catch(e) {
+    mostrarFeedback('Erro de conexão. Tente novamente.', 'erro');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar convite →';
+}
+
+function mostrarFeedback(msg, tipo) {
+  const fb = document.getElementById('conv-feedback');
+  if (!fb) return;
+  fb.style.display  = 'block';
+  fb.style.background = tipo === 'ok' ? 'rgba(42,122,75,.08)' : 'rgba(192,57,43,.08)';
+  fb.style.color      = tipo === 'ok' ? 'var(--baixo)' : 'var(--alto)';
+  fb.style.border     = '1px solid ' + (tipo === 'ok' ? 'rgba(42,122,75,.2)' : 'rgba(192,57,43,.2)');
+  fb.textContent = msg;
+}
+
+async function reenviarConvite(email, nome, cargo, setor) {
+  await sb.from('convites_colaboradores')
+    .update({ status: 'pendente' })
+    .eq('email', email).eq('empresa_id', perfil.empresa_id);
+
+  document.getElementById('conv-email').value = email;
+  document.getElementById('conv-nome').value  = nome;
+  document.getElementById('conv-cargo').value = cargo;
+  enviarConvite();
 }
 
 </script>
