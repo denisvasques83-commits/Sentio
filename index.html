@@ -1051,28 +1051,50 @@ async function abrirTrilha(trilhaId, info) {
   '</div>';
 
   if (modulos && modulos.length > 0) {
-    html += '<div style="display:flex;flex-direction:column;gap:12px">';
+    el.innerHTML = html + '<div id="lista-modulos" style="display:flex;flex-direction:column;gap:12px"></div>';
+    var listaEl = document.getElementById('lista-modulos');
+    html = '';
     modulos.forEach(function(m, i) {
       var concluido = modulosConcluidos.includes(m.id);
-      html += '<div class="s-card" style="cursor:pointer" onclick="abrirModuloConteudo(' + m.id + ',' + trilhaId + ')">' +
-        '<div style="display:flex;gap:14px;align-items:flex-start">' +
-          '<div style="width:32px;height:32px;border-radius:50%;background:' + (concluido ? 'var(--baixo)' : 'var(--neutro2)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
-            '<span style="font-size:13px;color:' + (concluido ? 'white' : 'var(--ink2)') + ';font-weight:600">' + (concluido ? '✓' : (i+1)) + '</span>' +
-          '</div>' +
-          '<div style="flex:1">' +
-            '<div style="font-size:14px;font-weight:500;color:var(--ink);margin-bottom:4px">' + m.titulo + '</div>' +
-            '<div style="font-size:11px;color:var(--ink2)">⏱ ' + (m.tempo_estimado || 5) + ' min · ' + (m.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</div>' +
-          '</div>' +
-          '<span style="font-size:11px;color:' + (concluido ? 'var(--baixo)' : 'var(--dourado)') + ';font-weight:500">' + (concluido ? 'Concluído' : 'Abrir →') + '</span>' +
-        '</div>' +
-      '</div>';
+      var card = document.createElement('div');
+      card.className = 's-card';
+      card.style.cursor = 'pointer';
+      card.dataset.moduloId = m.id;
+      card.dataset.trilhaId = trilhaId;
+      card.addEventListener('click', function() {
+        abrirModuloConteudo(this.dataset.moduloId, this.dataset.trilhaId);
+      });
+      var inner = document.createElement('div');
+      inner.style.cssText = 'display:flex;gap:14px;align-items:flex-start';
+      var num = document.createElement('div');
+      num.style.cssText = 'width:32px;height:32px;border-radius:50%;background:' + (concluido ? 'var(--baixo)' : 'var(--neutro2)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0';
+      var numSpan = document.createElement('span');
+      numSpan.style.cssText = 'font-size:13px;color:' + (concluido ? 'white' : 'var(--ink2)') + ';font-weight:600';
+      numSpan.textContent = concluido ? '✓' : (i+1);
+      num.appendChild(numSpan);
+      var info = document.createElement('div');
+      info.style.flex = '1';
+      var titulo = document.createElement('div');
+      titulo.style.cssText = 'font-size:14px;font-weight:500;color:var(--ink);margin-bottom:4px';
+      titulo.textContent = m.titulo;
+      var meta = document.createElement('div');
+      meta.style.cssText = 'font-size:11px;color:var(--ink2)';
+      meta.textContent = '⏱ ' + (m.tempo_estimado || 5) + ' min · ' + (m.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo');
+      info.appendChild(titulo);
+      info.appendChild(meta);
+      var status = document.createElement('span');
+      status.style.cssText = 'font-size:11px;color:' + (concluido ? 'var(--baixo)' : 'var(--dourado)') + ';font-weight:500';
+      status.textContent = concluido ? 'Concluído' : 'Abrir →';
+      inner.appendChild(num);
+      inner.appendChild(info);
+      inner.appendChild(status);
+      card.appendChild(inner);
+      listaEl.appendChild(card);
     });
-    html += '</div>';
+    // cards inseridos via DOM acima
   } else {
-    html += '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0">Módulos desta trilha em breve.</p>';
+    el.innerHTML = html + '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:40px 0">Módulos desta trilha em breve.</p>';
   }
-
-  el.innerHTML = html;
 }
 
 // ── Abrir módulo e marcar como concluído ──────────────────────────
