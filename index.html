@@ -2719,7 +2719,8 @@ async function renderConvites() {
               </div>
               <div style="display:flex;align-items:center;gap:8px">
                 <span class="ri-score ${statusCor}" style="font-size:10px">${statusLabel}</span>
-                ${c.status !== 'aceito' ? `<button class="btn-sec" style="font-size:10px;padding:4px 8px" onclick="reenviarConvite('${c.email}','${c.nome||''}','${c.cargo||''}','${c.setor||''}')">Reenviar</button>` : ''}
+                ${c.status !== 'aceito' ? `<button class="btn-sec" style="font-size:10px;padding:4px 8px" onclick="reenviarConvite('${c.id}','${c.email}','${c.nome||''}','${c.cargo||''}','${c.setor||''}')">Reenviar</button>` : ''}
+                <button class="btn-sec" style="font-size:10px;padding:4px 8px;color:var(--alto);border-color:var(--alto)" onclick="excluirConvite('${c.id}')">Excluir</button>
               </div>
             </div>
           `;
@@ -2802,15 +2803,34 @@ function mostrarFeedback(msg, tipo) {
   fb.textContent = msg;
 }
 
-async function reenviarConvite(email, nome, cargo, setor) {
-  await sb.from('convites_colaboradores')
-    .update({ status: 'pendente' })
-    .eq('email', email).eq('empresa_id', perfil.empresa_id);
+async function reenviarConvite(id, email, nome, cargo, setor) {
+  if (!confirm('Reenviar convite para ' + email + '?')) return;
 
+  // Deletar convite antigo para permitir reenvio
+  await sb.from('convites_colaboradores')
+    .delete().eq('id', id);
+
+  // Preencher formulário e enviar
   document.getElementById('conv-email').value = email;
-  document.getElementById('conv-nome').value  = nome;
-  document.getElementById('conv-cargo').value = cargo;
-  enviarConvite();
+  document.getElementById('conv-nome').value  = nome || '';
+  document.getElementById('conv-cargo').value = cargo || '';
+  const setorEl = document.getElementById('conv-setor');
+  if (setorEl) {
+    for (var i = 0; i < setorEl.options.length; i++) {
+      if (setorEl.options[i].value === setor) { setorEl.selectedIndex = i; break; }
+    }
+  }
+  await enviarConvite();
+}
+
+async function excluirConvite(id) {
+  if (!confirm('Excluir este convite? O colaborador não conseguirá mais usar o link enviado.')) return;
+  const { error } = await sb.from('convites_colaboradores').delete().eq('id', id);
+  if (error) {
+    alert('Erro ao excluir: ' + error.message);
+  } else {
+    renderConvites();
+  }
 }
 
 </script>
