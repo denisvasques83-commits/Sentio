@@ -486,7 +486,9 @@ async function renderDashboard() {
         .in('colaborador_id', idColabs);
       diags = diagsData || [];
     }
-    totalDiag = diags.length;
+    // Contar colaboradores únicos que fizeram diagnóstico (não total de diagnósticos)
+    const colabsQueResponderam = new Set(diags.map(d => d.colaborador_id));
+    totalDiag = colabsQueResponderam.size;
     if (diags?.length > 0) {
       const scores = diags.map(d => d.score_total || 0);
       mediaScore = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
@@ -1246,7 +1248,10 @@ async function renderRelatorio() {
   const diags = diagsData;
 
   const totalColab  = colabs?.length  || 0;
-  const totalDiag   = diags?.length   || 0;
+  // Contar colaboradores únicos que fizeram diagnóstico
+  const colabsComDiag = new Set((diags || []).map(function(d) { return d.colaborador_id; }));
+  const totalDiag   = colabsComDiag.size;
+  const totalDiagReal = diags?.length || 0; // total real de diagnósticos para análise
   const adesao      = totalColab > 0 ? Math.round((totalDiag / totalColab) * 100) : 0;
   const baixo       = diags?.filter(d => d.nivel_risco === 'baixo').length  || 0;
   const medio       = diags?.filter(d => d.nivel_risco === 'medio').length  || 0;
