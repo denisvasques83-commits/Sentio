@@ -47,14 +47,14 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--neutro);c
 .app-layout{display:flex;width:100%;min-height:100vh;}
 .sidebar{width:var(--sidebar);background:var(--verde);min-height:100vh;display:flex;flex-direction:column;padding:32px 0;position:fixed;left:0;top:0;z-index:100;}
 .s-logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--neutro);padding:0 28px;margin-bottom:6px;letter-spacing:-.3px;}
-.s-tag{font-size:8px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:var(--dourado);padding:0 28px;margin-bottom:36px;}
+.s-tag{font-size:8px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:var(--dourado);padding:0 28px;margin-bottom:28px;opacity:.75;}
 .s-div{height:1px;background:rgba(255,255,255,.08);margin:0 28px 24px;}
-.s-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:0 28px;margin-bottom:8px;}
+.s-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:0 28px 6px;margin-top:8px;display:block;}
 .s-nav{flex:1;}
-.nav-item{display:flex;align-items:center;gap:12px;padding:11px 28px;font-size:13px;font-weight:400;color:rgba(255,255,255,.5);cursor:pointer;transition:all .2s;border-left:3px solid transparent;}
-.nav-item:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.04);}
-.nav-item.on{color:var(--neutro);background:rgba(255,255,255,.07);border-left-color:var(--dourado);font-weight:500;}
-.nav-ic{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.nav-item{display:flex;align-items:center;padding:10px 28px;font-size:13px;font-weight:400;color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;border-left:2px solid transparent;letter-spacing:.1px;}
+.nav-item:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.03);}
+.nav-item.on{color:var(--neutro);background:rgba(255,255,255,.06);border-left-color:var(--dourado);font-weight:500;}
+.nav-ic{display:none;}
 .s-footer{padding:20px 28px 0;border-top:1px solid rgba(255,255,255,.08);margin-top:auto;}
 .s-user{display:flex;align-items:center;gap:10px;}
 .u-av{width:36px;height:36px;border-radius:50%;background:var(--dourado);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:white;flex-shrink:0;}
@@ -64,7 +64,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--neutro);c
 .m-header{background:var(--branco);padding:20px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--neutro2);position:sticky;top:0;z-index:50;}
 .m-h-esq h1{font-family:'Cormorant Garamond',serif;font-size:24px;font-style:normal;font-weight:600;color:var(--ink);line-height:1;margin-bottom:2px;}
 .m-h-esq p{font-size:12px;color:var(--ink2);font-weight:300;}
-.m-content{padding:32px 40px;}
+.m-content{padding:28px 40px;}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
 .m-card{background:var(--branco);border:1.5px solid var(--neutro2);border-radius:16px;padding:24px;position:relative;overflow:hidden;transition:all .2s;}
 .m-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06);}
@@ -236,18 +236,21 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--neutro);c
       <div class="s-div"></div>
       <div class="s-lbl">Menu principal</div>
       <nav class="s-nav">
-        <div class="nav-item on" onclick="navegarGestor('dashboard',this)"><span class="nav-ic">⊞</span> Dashboard</div>
-        <div class="nav-item" onclick="navegarGestor('sessoes',this)"><span class="nav-ic">◇</span> Sessões</div>
-        <div class="nav-item" onclick="navegarGestor('conteudos',this)"><span class="nav-ic">☰</span> Conteúdos</div>
+        <span class="s-lbl">Principal</span>
+        <div class="nav-item on" onclick="navegarGestor('dashboard',this)">Dashboard</div>
+        <div class="nav-item" onclick="navegarGestor('relatorio',this)">Relatório NR-01</div>
+        <div class="nav-item" onclick="navegarGestor('configuracoes',this)">Configurações</div>
+        <span class="s-lbl" style="margin-top:16px">Análise</span>
+        <div class="nav-item" onclick="navegarGestor('sessoes',this)">Sessões</div>
+        <div class="nav-item" onclick="navegarGestor('conteudos',this)">Conteúdos</div>
         <div class="nav-item" onclick="navegarGestor('alertas',this)">
-          <span class="nav-ic">△</span> Alertas
+          Alertas
           <span id="badge-alertas" style="margin-left:auto;background:var(--alto);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;display:none">0</span>
         </div>
-        <div class="nav-item" onclick="navegarGestor('relatorio',this)"><span class="nav-ic">▦</span> Relatório IA</div>
-        <div class="nav-item" onclick="navegarGestor('configuracoes',this)"><span class="nav-ic">⚙</span> Configurações</div>
-        <div class="nav-item" onclick="exibirDireitosLGPD()"><span class="nav-ic">🔒</span> Meus dados</div>
-        <div class="nav-item" id="nav-admin-link" style="display:none;margin-top:8px" onclick="abrirAdmin()"><span class="nav-ic">🔧</span> Admin</div>
-        <div class="nav-item" style="margin-top:4px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
+        <span class="s-lbl" style="margin-top:16px">Conta</span>
+        <div class="nav-item" onclick="exibirDireitosLGPD()">Meus dados</div>
+        <div class="nav-item" id="nav-admin-link" style="display:none" onclick="abrirAdmin()">Admin</div>
+        <div class="nav-item" style="margin-top:8px" onclick="sair()">Sair</div>
       </nav>
       <div class="s-footer">
         <div class="s-user">
@@ -286,12 +289,14 @@ body{font-family:'DM Sans',sans-serif;font-weight:300;background:var(--neutro);c
       <div class="s-tag">Inteligência Psicossocial</div>
       <div class="s-div"></div>
       <nav class="s-nav">
-        <div class="nav-item on" onclick="navegarColab('home',this)"><span class="nav-ic">⊞</span> Início</div>
-        <div class="nav-item" onclick="navegarColab('diagnostico',this)"><span class="nav-ic">◎</span> Meu diagnóstico</div>
-        <div class="nav-item" onclick="navegarColab('sessoes',this)"><span class="nav-ic">◇</span> Minhas sessões</div>
-        <div class="nav-item" onclick="navegarColab('conteudos',this)"><span class="nav-ic">☰</span> Conteúdos</div>
-        <div class="nav-item" onclick="exibirDireitosLGPD()"><span class="nav-ic">🔒</span> Meus dados</div>
-        <div class="nav-item" style="margin-top:8px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
+        <div class="s-lbl">Principal</div>
+        <div class="nav-item on" onclick="navegarColab('home',this)">Início</div>
+        <div class="nav-item" onclick="navegarColab('diagnostico',this)">Meu diagnóstico</div>
+        <div class="nav-item" onclick="navegarColab('conteudos',this)">Conteúdos</div>
+        <div class="s-lbl" style="margin-top:16px">Conta</div>
+        <div class="nav-item" onclick="navegarColab('sessoes',this)">Minhas sessões</div>
+        <div class="nav-item" onclick="exibirDireitosLGPD()">Meus dados</div>
+        <div class="nav-item" style="margin-top:8px" onclick="sair()">Sair</div>
       </nav>
       <div class="s-footer">
         <div class="s-user">
@@ -3531,9 +3536,11 @@ async function toggleModuloStatus(id, ativo) {
       <div class="s-tag" style="color:var(--dourado)">Super Admin</div>
       <div class="s-div"></div>
       <nav class="s-nav">
-        <div class="nav-item on" onclick="adminNavegar('dashboard',this)"><span class="nav-ic">⊞</span> Dashboard</div>
-        <div class="nav-item" onclick="adminNavegar('conteudo',this)"><span class="nav-ic">☰</span> Conteúdo</div>
-        <div class="nav-item" style="margin-top:8px" onclick="sair()"><span class="nav-ic">⤴</span> Sair</div>
+        <div class="s-lbl">Operação</div>
+        <div class="nav-item on" onclick="adminNavegar('dashboard',this)">Empresas</div>
+        <div class="nav-item" onclick="adminNavegar('conteudo',this)">Conteúdo</div>
+        <div class="s-lbl" style="margin-top:16px">Conta</div>
+        <div class="nav-item" style="margin-top:4px" onclick="sair()">Sair</div>
       </nav>
       <div class="s-footer">
         <div class="s-user">
