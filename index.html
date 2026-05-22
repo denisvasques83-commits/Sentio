@@ -527,95 +527,124 @@ async function renderDashboard() {
   const nivelRisco = mediaScore >= 70 ? 'BAIXO' : mediaScore >= 40 ? 'MÉDIO' : 'ALTO';
   const corGauge = mediaScore >= 70 ? '#2A7A4B' : mediaScore >= 40 ? '#D4860A' : '#C0392B';
   const dashOff = Math.round(201 * (1 - mediaScore/100));
+  const corBI = burnoutEmpresa ? burnoutEmpresa.corHex : '#D4860A';
+  const biScore = burnoutEmpresa ? burnoutEmpresa.indice : null;
+  const biFaixa = burnoutEmpresa ? burnoutEmpresa.faixa : null;
+  const biDesc  = burnoutEmpresa ? burnoutEmpresa.descricao : 'Realize diagnósticos para calcular o Índice de Burnout.';
+  const biEx    = burnoutEmpresa ? burnoutEmpresa.dimensoes.exaustao : '--';
+  const biDe    = burnoutEmpresa ? burnoutEmpresa.dimensoes.despersonalizacao : '--';
+  const biBR    = burnoutEmpresa ? burnoutEmpresa.dimensoes.baixa_realizacao : '--';
+  const biPct   = biScore || 0;
+
   document.getElementById('sec-dashboard').innerHTML = `
-    <div class="metrics">
+    <div class="metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
       <div class="m-card c-dourado">
-        <div class="m-lbl">Índice de Risco Geral</div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="gauge">
-            <svg width="80" height="80" viewBox="0 0 80 80">
-              <circle class="g-bg" cx="40" cy="40" r="32"/>
-              <circle class="g-fill" cx="40" cy="40" r="32" stroke="${corGauge}" stroke-dasharray="201" stroke-dashoffset="${dashOff}"/>
-            </svg>
-            <div class="g-txt">
-              <span class="g-num">${mediaScore || '--'}</span>
-              <span class="g-niv" style="color:${corGauge}">${nivelRisco}</span>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:12px;color:var(--ink2);margin-bottom:4px">Score da empresa</div>
-            <span class="trend t-neu">${totalDiag} diagnósticos</span>
-          </div>
-        </div>
-      </div>
-      <div class="m-card c-amarelo">
-        <div class="m-lbl">Em atenção</div>
-        <div class="m-val">${alto + medio}</div>
-        <div class="m-sub"><span>${alto} alto · ${medio} médio</span></div>
+        <div class="m-lbl">Colaboradores</div>
+        <div class="m-val">${totalColab}</div>
+        <div class="m-sub">cadastrados</div>
       </div>
       <div class="m-card c-verde">
         <div class="m-lbl">Diagnósticos</div>
         <div class="m-val">${totalDiag}</div>
-        <div class="m-sub"><span>de ${totalColab} colaboradores</span></div>
+        <div class="m-sub"><span class="trend ${engaj>=70?'t-up':'t-down'}">${engaj}% adesão</span></div>
+      </div>
+      <div class="m-card c-amarelo">
+        <div class="m-lbl">Em atenção</div>
+        <div class="m-val">${alto + medio}</div>
+        <div class="m-sub">${alto > 0 ? '<span class="trend t-down">' + alto + ' críticos</span>' : 'sem urgências'}</div>
       </div>
       <div class="m-card c-azul">
-        <div class="m-lbl">Taxa de adesão</div>
-        <div class="m-val">${engaj}%</div>
-        <div class="m-sub"><span>${totalDiag} responderam</span><span class="trend ${engaj>=70?'t-up':'t-down'}">${engaj>=70?'✓ Meta':'Abaixo'}</span></div>
+        <div class="m-lbl">Próx. ciclo</div>
+        <div class="m-val" style="font-size:32px">90d</div>
+        <div class="m-sub">reavaliação</div>
       </div>
     </div>
-    <div class="secoes">
+
+    <div style="background:var(--verde);border-radius:16px;padding:24px 28px;margin-bottom:20px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:14px">Índice de Burnout · Modelo Maslach · NR-01</div>
+      <div style="display:flex;align-items:flex-end;gap:20px;margin-bottom:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:72px;font-weight:600;color:var(--neutro);line-height:1">${biScore || '--'}</div>
+          ${biFaixa ? '<div style="display:inline-block;padding:4px 14px;border-radius:100px;background:' + corBI + '33;margin-top:6px"><span style="font-size:12px;font-weight:600;color:' + corBI + '">' + biFaixa + '</span></div>' : ''}
+        </div>
+        <div style="flex:1;min-width:200px;padding-bottom:8px">
+          <div style="font-size:13px;color:rgba(246,244,240,.6);line-height:1.6;margin-bottom:14px">${biDesc}</div>
+          <div style="height:4px;background:rgba(255,255,255,.12);border-radius:100px;overflow:hidden">
+            <div style="height:100%;width:${biPct}%;background:${corBI};border-radius:100px;transition:width 1s ease"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">
+          <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Exaustão</div>
+          <div style="font-size:24px;font-weight:500;color:var(--neutro)">${biEx}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">
+          <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Despersonalização</div>
+          <div style="font-size:24px;font-weight:500;color:var(--neutro)">${biDe}</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">
+          <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Realização</div>
+          <div style="font-size:24px;font-weight:500;color:var(--neutro)">${biBR}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="s-card" id="trilhas-preview">
+        <div class="s-titulo" style="margin-bottom:3px">Trilhas em andamento</div>
+        <div class="s-sub">Progresso por programa de intervenção</div>
+        <div class="loading">Carregando...</div>
+      </div>
       <div class="s-card">
-        <div class="s-titulo">Distribuição de risco</div>
-        <div class="s-sub">Colaboradores por nível de atenção</div>
-        <div class="risco-item">
-          <div class="ri-header"><span class="ri-nome">Risco Baixo</span><span class="ri-score rs-baixo">${baixo} colaboradores</span></div>
-          <div class="barra"><div class="bf bf-baixo" style="width:${totalDiag?Math.round(baixo/totalDiag*100):0}%"></div></div>
-        </div>
-        <div class="risco-item">
-          <div class="ri-header"><span class="ri-nome">Risco Médio</span><span class="ri-score rs-medio">${medio} colaboradores</span></div>
-          <div class="barra"><div class="bf bf-medio" style="width:${totalDiag?Math.round(medio/totalDiag*100):0}%"></div></div>
-        </div>
-        <div class="risco-item">
-          <div class="ri-header"><span class="ri-nome">Risco Alto</span><span class="ri-score rs-alto">${alto} colaboradores</span></div>
-          <div class="barra"><div class="bf bf-alto" style="width:${totalDiag?Math.round(alto/totalDiag*100):0}%"></div></div>
-        </div>
-        ${totalDiag === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:20px 0;font-style:normal">Nenhum diagnóstico realizado ainda.</p>' : ''}
-      </div>
-      <div class="s-card" id="alertas-preview">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div class="s-titulo">Alertas recentes</div>
-        </div>
-        <div class="s-sub">Ações recomendadas para o RH</div>
-        <div class="loading">Carregando alertas...</div>
+        <div class="s-titulo" style="margin-bottom:3px">Burnout por setor</div>
+        <div class="s-sub">Índice Maslach por área</div>
+        <div id="heatmap-gestor">Carregando...</div>
       </div>
     </div>
-    <div class="ia-box">
-      <div class="ia-icon">✦</div>
-      <div>
-        <div class="ia-label">Análise interpretativa — IA</div>
-        <div class="ia-txt" id="ia-resumo">
-          ${totalDiag === 0
-            ? 'Nenhum diagnóstico realizado ainda. Convide seus colaboradores para responderem o questionário psicossocial para obter análises e recomendações personalizadas.'
-            : 'A empresa apresenta índice geral de risco <strong style="color:var(--areia)">' + nivelRisco + ' (' + mediaScore + '/100)</strong> com base em ' + totalDiag + ' diagnóstico(s) realizado(s). ' + (alto > 0 ? '<strong style="color:var(--areia)">' + alto + ' colaborador(es)</strong> apresentam risco alto e necessitam de atenção imediata.' : '') + (engaj < 70 ? ' A taxa de adesão de ' + engaj + '% está abaixo da meta de 70%.' : ' A taxa de adesão de ' + engaj + '% está dentro da meta.')
-          }
-        </div>
-      </div>
+
+    <div class="s-card" id="alertas-preview">
+      <div class="s-titulo" style="margin-bottom:3px">Alertas recentes</div>
+      <div class="s-sub">Ações recomendadas para o RH</div>
+      <div class="loading">Carregando alertas...</div>
     </div>
   `;
-  // Renderizar burnout
-  var burnoutEl = document.getElementById('burnout-dashboard');
-  if (burnoutEl) burnoutEl.innerHTML = renderCardBurnout(burnoutEmpresa, true);
-
   // Renderizar heatmap
-  if (empresaId) {
-    var heatmapContainer = document.createElement('div');
-    heatmapContainer.className = 's-card';
-    heatmapContainer.style.marginBottom = '24px';
-    heatmapContainer.innerHTML = '<div class="s-titulo" style="margin-bottom:4px">Heatmap de Burnout por Setor</div><div class="s-sub">Índice Maslach por área</div><div id="heatmap-gestor"></div>';
-    var secDash = document.getElementById('sec-dashboard');
-    if (secDash) secDash.appendChild(heatmapContainer);
-    renderHeatmapBurnout(empresaId, 'heatmap-gestor');
+  if (empresaId) renderHeatmapBurnout(empresaId, 'heatmap-gestor');
+
+  // Renderizar trilhas no dashboard
+  if (empresaId && perfil?.id) {
+    var { data: progresso } = await sb.from('progresso_trilhas').select('*').eq('colaborador_id', perfil.id);
+    var { data: todoProg } = await sb.from('progresso_trilhas').select('trilha_id,modulos_concluidos,concluida').eq('empresa_id', empresaId);
+    var trilhasEl = document.getElementById('trilhas-preview');
+    if (trilhasEl) {
+      var nomesTrilhas = {1:'Gestão de Demanda',2:'Prevenção de Exaustão',3:'Segurança Psicológica',4:'Liderança sob Pressão',5:'Clareza Operacional',6:'Comunicação Assertiva',7:'Regulação Emocional',8:'Gestão de Rotina',9:'Reconhecimento e Autonomia'};
+      var modulosPorTrilha = {1:5,2:6,3:5,4:5,5:5,6:5,7:5,8:5,9:5};
+      var emojisTrilha = {1:'📋',2:'🔴',3:'🛡️',4:'💼',5:'⚙️',6:'💬',7:'🧘',8:'📅',9:'⭐'};
+      var coresTrilha = {1:'#FAEEDA',2:'#FCEBEB',3:'#E1F5EE',4:'#E6F1FB',5:'#F1EFE8',6:'#EEEDFE',7:'#E1F5EE',8:'#E6F1FB',9:'#FAEEDA'};
+      var ativasTrilhas = [];
+      if (todoProg) {
+        todoProg.forEach(function(p) {
+          if (!ativasTrilhas.find(function(t){return t.id===p.trilha_id;})) {
+            ativasTrilhas.push({ id: p.trilha_id, concluidos: p.modulos_concluidos || 0, total: modulosPorTrilha[p.trilha_id] || 5 });
+          }
+        });
+      }
+      if (ativasTrilhas.length > 0) {
+        trilhasEl.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Trilhas em andamento</div><div class="s-sub">Progresso por programa de intervenção</div>' +
+          ativasTrilhas.slice(0,4).map(function(t) {
+            var pct = Math.round(t.concluidos / t.total * 100);
+            return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--neutro2)">' +
+              '<div style="width:34px;height:34px;border-radius:10px;background:' + (coresTrilha[t.id]||'#F1EFE8') + ';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">' + (emojisTrilha[t.id]||'📋') + '</div>' +
+              '<div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px">' + (nomesTrilhas[t.id]||'Trilha') + '</div><div style="height:4px;background:var(--neutro2);border-radius:100px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--verde);border-radius:100px;transition:width 1s ease"></div></div></div>' +
+              '<div style="text-align:right;font-size:12px;font-weight:600;color:var(--ink);min-width:32px">' + pct + '%</div>' +
+            '</div>';
+          }).join('') +
+          (ativasTrilhas.length === 0 ? '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:20px 0">Nenhuma trilha iniciada.</p>' : '');
+      } else {
+        trilhasEl.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Trilhas em andamento</div><div class="s-sub">Progresso por programa de intervenção</div><p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Nenhuma trilha iniciada ainda.</p>';
+      }
+    }
   }
 
   if (empresaId) {
