@@ -1117,7 +1117,7 @@ async function abrirModuloConteudo(moduloId, trilhaId) {
 
   var rodapeEl = document.createElement('div');
   rodapeEl.style.cssText = 'margin-top:32px;padding-top:24px;border-top:1px solid var(--neutro2);text-align:center';
-  rodapeEl.innerHTML = '<button class="btn-p" onclick="marcarModuloConcluido('' + moduloId + '',' + trilhaId + ')">Marcar como concluído ✓</button>';
+  rodapeEl.innerHTML = '<button class="btn-p" onclick="marcarModuloConcluido(\'' + moduloId + '\',' + trilhaId + ')">Marcar como concluído ✓</button>';
   card.appendChild(rodapeEl);
 
   wrapper.appendChild(card);
