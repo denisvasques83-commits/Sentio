@@ -948,22 +948,26 @@ async function renderDashboard() {
       <div class="m-card c-dourado">
         <div class="m-lbl">Colaboradores</div>
         <div class="m-val">${totalColab}</div>
-        <div class="m-sub">cadastrados</div>
+        <div class="m-sub">cadastrados na plataforma</div>
+        <div style="font-size:11px;color:var(--ink2);margin-top:6px;line-height:1.5">Total de pessoas com acesso ativo à plataforma Sentio.</div>
       </div>
       <div class="m-card c-verde">
         <div class="m-lbl">Diagnósticos</div>
         <div class="m-val">${totalDiag}</div>
         <div class="m-sub"><span class="trend ${engaj>=70?'t-up':'t-down'}">${engaj}% adesão</span></div>
+        <div style="font-size:11px;color:var(--ink2);margin-top:6px;line-height:1.5">${engaj>=70 ? 'Meta de 70% atingida. Dados representativos para o relatório NR-01.' : 'Abaixo da meta de 70%. Reenvie os convites para aumentar a cobertura.'}</div>
       </div>
       <div class="m-card c-amarelo">
         <div class="m-lbl">Em atenção</div>
         <div class="m-val">${alto + medio}</div>
         <div class="m-sub">${alto > 0 ? '<span class="trend t-down">' + alto + ' críticos</span>' : 'sem urgências'}</div>
+        <div style="font-size:11px;color:var(--ink2);margin-top:6px;line-height:1.5">${alto > 0 ? alto + ' colaborador(es) com indicadores críticos exigem atenção imediata conforme NR-01.' : 'Nenhum colaborador em nível crítico neste ciclo.'}</div>
       </div>
       <div class="m-card c-azul">
         <div class="m-lbl">Próx. ciclo</div>
         <div class="m-val" style="font-size:32px">90d</div>
         <div class="m-sub">reavaliação</div>
+        <div style="font-size:11px;color:var(--ink2);margin-top:6px;line-height:1.5">O diagnóstico deve ser reaplicado a cada 90 dias para monitoramento contínuo do GRO.</div>
       </div>
     </div>
 
@@ -983,16 +987,19 @@ async function renderDashboard() {
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
         <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">
-          <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Exaustão</div>
+          <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Exaustão emocional</div>
           <div style="font-family:'Nunito',sans-serif;font-size:24px;font-weight:300;color:var(--neutro)">${biEx}</div>
+          <div style="font-size:10px;color:rgba(246,244,240,.35);margin-top:4px;line-height:1.4">Nível de esgotamento físico e emocional da equipe no trabalho.</div>
         </div>
         <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">
-          <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Despersonalização</div>
+          <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Distanciamento</div>
           <div style="font-family:'Nunito',sans-serif;font-size:24px;font-weight:300;color:var(--neutro)">${biDe}</div>
+          <div style="font-size:10px;color:rgba(246,244,240,.35);margin-top:4px;line-height:1.4">Desconexão emocional com o trabalho, colegas e propósito da função.</div>
         </div>
         <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px">
           <div style="font-size:9px;color:rgba(246,244,240,.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Realização</div>
           <div style="font-family:'Nunito',sans-serif;font-size:24px;font-weight:300;color:var(--neutro)">${biBR}</div>
+          <div style="font-size:10px;color:rgba(246,244,240,.35);margin-top:4px;line-height:1.4">Senso de conquista, crescimento e propósito no ambiente de trabalho.</div>
         </div>
       </div>
     </div>
@@ -1010,20 +1017,68 @@ async function renderDashboard() {
       </div>
       <div class="s-card" id="donut-risco">
         <div class="s-titulo" style="margin-bottom:3px">Distribuição de risco</div>
-        <div class="s-sub">Colaboradores por nível</div>
+        <div class="s-sub">Colaboradores por nível de atenção</div>
         <div class="loading">Carregando...</div>
       </div>
     </div>
 
     <div class="s-card" id="alerta-adesao" style="display:none;border-left:3px solid var(--alto);background:#FFF8F8"></div>
+    <div class="s-card" id="eixo-critico" style="display:none;border-left:3px solid var(--dourado);margin-bottom:16px"></div>
+    <div class="s-card" id="plano-acao-setor" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="s-titulo">Plano de ação por setor</div>
+        <button class="btn-sec" style="font-size:11px;padding:5px 12px" onclick="abrirModalPlanoAcao()">+ Adicionar ação</button>
+      </div>
+      <div class="s-sub" style="margin-bottom:12px">Ações definidas pelo gestor para cada área em risco</div>
+      <div id="lista-plano-acao"><div class="loading">Carregando...</div></div>
+    </div>
     <div class="s-card" id="alertas-preview">
       <div class="s-titulo" style="margin-bottom:3px">Alertas recentes</div>
-      <div class="s-sub">Ações recomendadas para o RH</div>
+      <div class="s-sub">Notificações automáticas do sistema</div>
       <div class="loading">Carregando alertas...</div>
     </div>
   `;
   // Renderizar heatmap
   if (empresaId) renderHeatmapBurnout(empresaId, 'heatmap-gestor');
+
+  // Renderizar plano de ação
+  renderPlanoAcao();
+
+  // Calcular eixo mais crítico
+  if (diags && diags.length > 0) {
+    var eixos = [
+      { key: 'score_organizacao', nome: 'Organização do trabalho', acao: 'Revisar distribuição de tarefas, clareza de papéis e processos internos.' },
+      { key: 'score_condicoes', nome: 'Condições do trabalho', acao: 'Avaliar ergonomia, recursos disponíveis e ambiente físico de trabalho.' },
+      { key: 'score_relacoes', nome: 'Relações socioprofissionais', acao: 'Investir em comunicação não violenta e resolução de conflitos na equipe.' },
+      { key: 'score_reconhecimento', nome: 'Reconhecimento e crescimento', acao: 'Estruturar feedbacks regulares, planos de carreira e reconhecimento público.' },
+      { key: 'score_elo', nome: 'Elo trabalho-vida', acao: 'Revisar jornadas, home office e políticas de desconexão digital.' }
+    ];
+    var mediasEixo = eixos.map(function(e) {
+      var vals = diags.filter(function(d) { return d[e.key] != null; }).map(function(d) { return d[e.key]; });
+      var media = vals.length > 0 ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length) : 0;
+      return Object.assign({}, e, { media });
+    });
+    var critico = mediasEixo.reduce(function(a,b) { return b.media > a.media ? b : a; });
+
+    var eixoEl = document.getElementById('eixo-critico');
+    if (eixoEl && critico.media > 40) {
+      eixoEl.style.display = 'block';
+      var corEixo = critico.media > 75 ? '#C0392B' : critico.media > 50 ? '#E67E22' : '#D4860A';
+      eixoEl.innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:14px">' +
+          '<div style="font-size:28px;flex-shrink:0">⚡</div>' +
+          '<div style="flex:1">' +
+            '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:' + corEixo + ';margin-bottom:4px">Eixo mais crítico da empresa</div>' +
+            '<div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px">' + critico.nome + ' — ' + critico.media + '/100</div>' +
+            '<div style="font-size:13px;color:var(--ink2);margin-bottom:10px;line-height:1.6">Este é o eixo com maior score de risco na empresa neste ciclo.</div>' +
+            '<div style="background:var(--neutro2);border-radius:8px;padding:10px 14px">' +
+              '<div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:3px">Ação recomendada</div>' +
+              '<div style="font-size:12px;color:var(--ink2);line-height:1.5">' + critico.acao + '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+  }
 
   // Alerta de baixa adesão (após 7 dias com menos de 50%)
   if (empresaId && totalColab > 0) {
@@ -4795,6 +4850,98 @@ async function enviarMsgCoach() {
   }
 
   btn.disabled = false;
+}
+
+async function renderPlanoAcao() {
+  var el = document.getElementById('lista-plano-acao');
+  if (!el) return;
+  var empresaId = perfil?.empresa_id;
+  var { data: acoes } = await sb.from('plano_acoes').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
+
+  if (!acoes || acoes.length === 0) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Nenhuma ação definida ainda. Clique em "+ Adicionar ação" para começar.</p>';
+    return;
+  }
+
+  el.innerHTML = acoes.map(function(a) {
+    var corStatus = a.status === 'concluida' ? 'var(--baixo)' : a.status === 'em_andamento' ? 'var(--dourado)' : 'var(--ink2)';
+    var labelStatus = a.status === 'concluida' ? '✓ Concluída' : a.status === 'em_andamento' ? '⏳ Em andamento' : '📋 Pendente';
+    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--neutro2)">' +
+      '<div style="flex:1">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">' +
+          '<span style="font-size:11px;font-weight:700;color:var(--dourado);text-transform:uppercase;letter-spacing:1px">' + (a.setor || 'Geral') + '</span>' +
+          '<span style="font-size:10px;color:' + corStatus + ';font-weight:600">' + labelStatus + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px">' + a.titulo + '</div>' +
+        '<div style="font-size:12px;color:var(--ink2)">' + (a.responsavel ? '👤 ' + a.responsavel : '') + (a.prazo ? ' · 📅 ' + new Date(a.prazo).toLocaleDateString("pt-BR") : '') + '</div>' +
+      '</div>' +
+      '<select data-id="' + a.id + '" onchange="atualizarStatusAcao(this.getAttribute(\'data-id\'),this.value)" style="border:1px solid var(--neutro2);border-radius:6px;padding:4px 8px;font-family:Nunito,sans-serif;font-size:11px;cursor:pointer;background:white">' +
+        '<option value="pendente"' + (a.status==='pendente'?' selected':'') + '>Pendente</option>' +
+        '<option value="em_andamento"' + (a.status==='em_andamento'?' selected':'') + '>Em andamento</option>' +
+        '<option value="concluida"' + (a.status==='concluida'?' selected':'') + '>Concluída</option>' +
+      '</select>' +
+    '</div>';
+  }).join('');
+}
+
+async function atualizarStatusAcao(id, status) {
+  await sb.from('plano_acoes').update({ status }).eq('id', id);
+}
+
+function abrirModalPlanoAcao() {
+  var modal = document.getElementById('modal-plano-acao');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-plano-acao';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML =
+      '<div style="background:var(--neutro);border-radius:16px;padding:32px;width:480px;max-width:90vw">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">' +
+          '<div class="s-titulo">Nova ação</div>' +
+          '<button onclick="fecharModalPlanoAcao()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink2)">×</button>' +
+        '</div>' +
+        '<label class="lbl">Setor</label>' +
+        '<input type="text" class="inp" id="pa-setor" placeholder="Ex: Comercial, TI...">' +
+        '<label class="lbl">Ação a realizar</label>' +
+        '<input type="text" class="inp" id="pa-titulo" placeholder="Ex: Implementar 1:1 semanal com líderes">' +
+        '<label class="lbl">Responsável</label>' +
+        '<input type="text" class="inp" id="pa-responsavel" placeholder="Nome do responsável">' +
+        '<label class="lbl">Prazo</label>' +
+        '<input type="date" class="inp" id="pa-prazo">' +
+        '<div style="display:flex;gap:12px;margin-top:16px">' +
+          '<button class="btn-sec" style="flex:1" onclick="fecharModalPlanoAcao()">Cancelar</button>' +
+          '<button class="btn-p" style="flex:1" onclick="salvarPlanoAcao()">Salvar ação</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+}
+
+function fecharModalPlanoAcao() {
+  var m = document.getElementById('modal-plano-acao');
+  if (m) m.style.display = 'none';
+}
+
+async function salvarPlanoAcao() {
+  var setor = document.getElementById('pa-setor').value.trim();
+  var titulo = document.getElementById('pa-titulo').value.trim();
+  var responsavel = document.getElementById('pa-responsavel').value.trim();
+  var prazo = document.getElementById('pa-prazo').value;
+
+  if (!titulo) { alert('Informe a ação a realizar.'); return; }
+
+  await sb.from('plano_acoes').insert({
+    empresa_id: perfil?.empresa_id,
+    setor: setor || null,
+    titulo,
+    responsavel: responsavel || null,
+    prazo: prazo || null,
+    status: 'pendente'
+  });
+
+  document.getElementById('modal-plano-acao').style.display = 'none';
+  renderPlanoAcao();
 }
 
 function adminNavegar(secao, el) {
