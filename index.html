@@ -403,16 +403,29 @@ function showErro(msg) {
 }
 
 async function carregarPerfil() {
+  // Buscar perfil sem join para evitar problemas de RLS
   const { data, error } = await sb.from('perfis')
-    .select('*, empresas(*)')
+    .select('*')
     .eq('id', usuario.id)
-    .single();
+    .maybeSingle();
+
   if (error || !data) {
+    console.error('Erro ao carregar perfil:', error);
     await criarPerfilDemo();
     return;
   }
+
   perfil = data;
-  empresa = data.empresas;
+
+  // Buscar empresa separadamente
+  if (data.empresa_id) {
+    const { data: emp } = await sb.from('empresas')
+      .select('*')
+      .eq('id', data.empresa_id)
+      .maybeSingle();
+    empresa = emp;
+  }
+
   if (data.tipo_usuario === 'gestor' || data.tipo_usuario === 'admin') {
     await abrirDashboardGestor();
   } else {
