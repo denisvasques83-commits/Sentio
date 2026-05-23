@@ -383,7 +383,35 @@ window.addEventListener('load', async () => {
     document.getElementById('overlay').classList.add('hide');
   }, 1800);
 
-  // Verificar se está acessando /admin
+  // ── PRIORIDADE 1: Detectar token de convite na URL ──────────────
+  var urlParams = new URLSearchParams(window.location.search);
+  var tokenHash = urlParams.get('token_hash');
+  var tokenType = urlParams.get('type') || 'invite';
+
+  if (tokenHash) {
+    // Tem token de convite — processar ANTES de qualquer sessão existente
+    // Fazer logout da sessão atual se houver
+    await sb.auth.signOut();
+
+    var { data: otpData, error: otpErr } = await sb.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: tokenType === 'invite' ? 'invite' : 'recovery'
+    });
+
+    if (!otpErr && otpData?.session) {
+      usuario = otpData.session.user;
+      var nomeConvite = usuario.user_metadata?.nome || usuario.email?.split('@')[0] || '';
+      var bvEl = document.getElementById('bv-nome');
+      if (bvEl) bvEl.textContent = 'Olá' + (nomeConvite ? ', ' + nomeConvite : '') + '!';
+      // Limpar token da URL
+      history.replaceState(null, '', window.location.pathname);
+      document.getElementById('overlay').classList.add('hide');
+      trocarTela('tela-primeiro-acesso');
+      return;
+    }
+  }
+
+  // ── PRIORIDADE 2: Sessão existente ─────────────────────────────
   var isAdminRoute = window.location.hash === '#admin' || window.location.search.includes('admin=1');
 
   const { data: { session } } = await sb.auth.getSession();
