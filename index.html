@@ -424,9 +424,15 @@ window.addEventListener('load', async () => {
     usuario = session.user;
     if (isAdminRoute) {
       if (usuario.email === ADMIN_EMAIL) {
+        // É o admin — vai para o painel
         await abrirAdmin();
       } else {
-        await carregarPerfil();
+        // Sessão de outro usuário tentando acessar /admin
+        // Fazer logout e mostrar login de admin
+        await sb.auth.signOut();
+        usuario = null;
+        document.getElementById('login-tag').textContent = 'Acesso Administrativo';
+        window._adminRoute = true;
       }
     } else {
       await carregarPerfil();
