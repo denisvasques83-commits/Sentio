@@ -2127,12 +2127,43 @@ async function abrirHomeColaborador() {
   }
 
   const temDiag = !!diagRecente;
+
+  // Garantir que só sec-colab-home está visível
+  document.getElementById('sec-colab-home').style.display = 'block';
+  document.getElementById('sec-colab-diag').style.display = 'none';
+  document.getElementById('sec-colab-cont').style.display = 'none';
+
+  // Calcular burnout para mostrar na home
+  var burnoutColab = diagRecente ? calcularIndiceBurnout(diagRecente) : null;
+  var trilhasRec = diagRecente ? calcularTrilhasRecomendadas(diagRecente) : [];
+
+  // Linguagem humanizada por faixa
+  var msgBurnout = '';
+  var corMsg = 'var(--verde)';
+  if (burnoutColab) {
+    if (burnoutColab.indice <= 25) {
+      msgBurnout = 'Seus indicadores estão equilibrados. Continue cuidando de você.';
+      corMsg = '#2A7A4B';
+    } else if (burnoutColab.indice <= 50) {
+      msgBurnout = 'Identificamos alguns pontos que merecem atenção. As trilhas abaixo foram preparadas para você.';
+      corMsg = '#D4860A';
+    } else if (burnoutColab.indice <= 75) {
+      msgBurnout = 'Você está carregando bastante coisa. É importante cuidar de si agora.';
+      corMsg = '#E67E22';
+    } else {
+      msgBurnout = 'Estamos aqui com você. As trilhas e recursos abaixo podem ajudar neste momento.';
+      corMsg = '#C0392B';
+    }
+  }
+
   document.getElementById('sec-colab-home').innerHTML = `
     <div class="c-welcome">
-      <h2>Sua saúde importa aqui.</h2>
-      <p>Tudo que você compartilha é sigiloso. Seu gestor não vê suas respostas individuais.</p>
-      <span class="badge ${temDiag ? 'b-ok' : 'b-pend'}">${temDiag ? '✓ Diagnóstico em dia' : '⚠ Diagnóstico pendente — responda agora'}</span>
+      <h2>${temDiag ? 'Olá, ' + ((perfil?.nome || '').split(' ')[0] || 'bem-vindo') + '.' : 'Sua saúde importa aqui.'}</h2>
+      <p>${temDiag ? msgBurnout : 'Tudo que você compartilha é sigiloso. Seu gestor não vê suas respostas individuais.'}</p>
+      <span class="badge ${temDiag ? 'b-ok' : 'b-pend'}">${temDiag ? '✓ Diagnóstico realizado' : '⚠ Diagnóstico pendente'}</span>
     </div>
+    ${burnoutColab ? '<div id="burnout-colab-card" style="margin-bottom:20px"></div>' : ''}
+    ${trilhasRec && trilhasRec.length > 0 ? '<div id="trilhas-colab-home" style="margin-bottom:24px"></div>' : ''}
     <div class="c-grid">
       <div class="c-card" onclick="navegarColab('diagnostico',null)">
         <span class="c-icon">📋</span>
@@ -2159,15 +2190,39 @@ async function abrirHomeColaborador() {
     </div>
     <div id="conts-home" class="loading">Carregando conteúdos...</div>
   `;
-  document.getElementById('header-colab-btn').innerHTML = '<button class="btn-pri" onclick="navegarColab(\'diagnostico\',null)">Fazer diagnóstico →</button>';
+  document.getElementById('header-colab-btn').innerHTML = '<button class="btn-pri" onclick="navegarColab(&quot;diagnostico&quot;,null)">Fazer diagnóstico →</button>';
   await renderConteudos();
   await renderSessoes('colaborador');
 
-  // Mostrar índice de burnout do colaborador
-  if (diagRecente) {
-    var burnoutColab = calcularIndiceBurnout(diagRecente);
+  // Renderizar card de burnout
+  if (burnoutColab) {
     var bcEl = document.getElementById('burnout-colab-card');
-    if (bcEl && burnoutColab) bcEl.innerHTML = renderCardBurnout(burnoutColab, false);
+    if (bcEl) bcEl.innerHTML = renderCardBurnout(burnoutColab, false);
+  }
+
+  // Renderizar trilhas recomendadas na home
+  if (trilhasRec && trilhasRec.length > 0) {
+    var trilhasHomeEl = document.getElementById('trilhas-colab-home');
+    if (trilhasHomeEl) {
+      var { data: progressoHome } = await sb.from('progresso_trilhas').select('*').eq('colaborador_id', perfil.id);
+      var progressoMap = {};
+      if (progressoHome) progressoHome.forEach(function(p) { progressoMap[p.trilha_id] = p; });
+      trilhasHomeEl.innerHTML = '<div class="s-titulo" style="margin-bottom:12px">Trilhas para você</div>' +
+        '<div style="display:flex;flex-direction:column;gap:8px">' +
+        trilhasRec.slice(0, 3).map(function(t) {
+          var prog = progressoMap[t.id];
+          var pct = prog ? Math.round((prog.modulos_concluidos || 0) / t.modulos * 100) : 0;
+          var corBadge = t.nivel === 'Crítico' || t.nivel === 'Alto' ? '#C0392B' : '#D4860A';
+          return '<div onclick="abrirTrilhaPorId(' + t.id + ')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;cursor:pointer;border:1px solid var(--neutro2);background:var(--branco)">' +
+            '<div style="width:38px;height:38px;border-radius:10px;background:var(--neutro2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + t.emoji + '</div>' +
+            '<div style="flex:1">' +
+              '<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px">' + t.nome + '</div>' +
+              '<div style="height:3px;background:var(--neutro2);border-radius:100px;overflow:hidden;margin-top:6px"><div style="height:100%;width:' + pct + '%;background:var(--verde);border-radius:100px"></div></div>' +
+            '</div>' +
+            '<div style="font-size:12px;font-weight:500;color:' + corBadge + ';flex-shrink:0">' + (pct > 0 ? pct + '%' : 'Iniciar →') + '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+    }
   }
   // Buscar módulos com conteúdo real (prioritários) para recomendar
   const { data: conts } = await sb.from('conteudos')
