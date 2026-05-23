@@ -469,12 +469,20 @@ async function criarSenha() {
     return;
   }
 
-  // Atualizar usuario com dados mais recentes
-  var { data: { session: newSession } } = await sb.auth.getSession();
-  if (newSession) usuario = newSession.user;
+  // Senha salva — agora fazer login com as credenciais para garantir sessão válida
+  var emailUsuario = usuario?.email;
+  if (emailUsuario) {
+    var { data: loginData, error: loginErr } = await sb.auth.signInWithPassword({
+      email: emailUsuario,
+      password: senha
+    });
+    if (!loginErr && loginData?.user) {
+      usuario = loginData.user;
+    }
+  }
 
-  _authHandled = true; // Evitar loop
-  await criarPerfilDemo(); // Cria perfil com metadata e redireciona
+  _authHandled = true;
+  await criarPerfilDemo();
 }
 
 async function fazerLogin() {
