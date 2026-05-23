@@ -2385,8 +2385,16 @@ async function finalizarDiagnostico() {
   }
   document.getElementById('diag-form-area').style.display = 'none';
   // Calcular burnout e trilhas para mostrar no resultado
-  var burnoutResult = calcularIndiceBurnout(scores);
-  var trilhasResult = calcularTrilhasRecomendadas(scores);
+  // Mapear scoresPorEixo para o formato esperado por calcularIndiceBurnout
+  var diagObj = {
+    score_organizacao:    scoresPorEixo.organizacao_trabalho    || 50,
+    score_condicoes:      scoresPorEixo.condicoes_trabalho      || 50,
+    score_relacoes:       scoresPorEixo.relacoes_socioprofissionais || 50,
+    score_reconhecimento: scoresPorEixo.reconhecimento_crescimento  || 50,
+    score_elo:            scoresPorEixo.elo_trabalho_vida       || 50
+  };
+  var burnoutResult = calcularIndiceBurnout(diagObj);
+  var trilhasResult = calcularTrilhasRecomendadas(diagObj);
 
   // Mensagem humanizada
   var msgResult = '';
@@ -3525,7 +3533,9 @@ function renderCardBurnout(burnout, compacto) {
     '<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:16px">' +
       '<div style="font-family:Cormorant Garamond,serif;font-size:64px;font-weight:600;color:var(--neutro);line-height:1">' + burnout.indice + '</div>' +
       '<div style="padding-bottom:8px">' +
-        '<div style="font-size:18px;font-weight:500;color:' + burnout.corHex + '">' + burnout.faixa + '</div>' +
+        '<div style="font-size:16px;font-weight:500;color:' + burnout.corHex + '">' +
+          (burnout.indice <= 25 ? 'Você está bem' : burnout.indice <= 50 ? 'Atenção recomendada' : burnout.indice <= 75 ? 'Suporte indicado' : 'Apoio necessário') +
+        '</div>' +
         '<div style="font-size:13px;color:rgba(246,244,240,.65)">' + burnout.descricao + '</div>' +
       '</div>' +
     '</div>' +
@@ -3534,24 +3544,20 @@ function renderCardBurnout(burnout, compacto) {
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">' +
       '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
-        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">EXAUSTÃO</div>' +
-        '<div style="font-size:22px;font-weight:500;color:var(--neutro)">' + burnout.dimensoes.exaustao + '</div>' +
-        '<div style="font-size:10px;color:rgba(246,244,240,.4)">Emocional</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">ENERGIA</div>' +
+        '<div style="font-size:22px;font-weight:300;color:var(--neutro);font-family:Nunito,sans-serif">' + burnout.dimensoes.exaustao + '</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.4)">nível de desgaste</div>' +
       '</div>' +
       '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
-        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">DESPERSONALIZAÇÃO</div>' +
-        '<div style="font-size:22px;font-weight:500;color:var(--neutro)">' + burnout.dimensoes.despersonalizacao + '</div>' +
-        '<div style="font-size:10px;color:rgba(246,244,240,.4)">Distanciamento</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">CONEXÃO</div>' +
+        '<div style="font-size:22px;font-weight:300;color:var(--neutro);font-family:Nunito,sans-serif">' + burnout.dimensoes.despersonalizacao + '</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.4)">com o trabalho</div>' +
       '</div>' +
       '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
-        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">REALIZAÇÃO</div>' +
-        '<div style="font-size:22px;font-weight:500;color:var(--neutro)">' + burnout.dimensoes.baixa_realizacao + '</div>' +
-        '<div style="font-size:10px;color:rgba(246,244,240,.4)">Profissional</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:4px">PROPÓSITO</div>' +
+        '<div style="font-size:22px;font-weight:300;color:var(--neutro);font-family:Nunito,sans-serif">' + burnout.dimensoes.baixa_realizacao + '</div>' +
+        '<div style="font-size:10px;color:rgba(246,244,240,.4)">realização pessoal</div>' +
       '</div>' +
-    '</div>' +
-    '<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px">' +
-      '<div style="font-size:10px;color:rgba(246,244,240,.5);letter-spacing:1px;margin-bottom:6px">PROTOCOLO NR-01</div>' +
-      '<div style="font-size:13px;color:rgba(246,244,240,.8)">' + burnout.protocolo + '</div>' +
     '</div>' +
   '</div>';
 }
