@@ -16,7 +16,7 @@
 --neutro: #E8E4DC;
 --neutro2: #CEC7B8;
 --ink: #1A1A18;
---ink2: #525252;
+--ink2: #3A3A38;
 --branco: #FFFFFF;
 --baixo: #2A7A4B;
 --medio: #D4860A;
@@ -2918,7 +2918,7 @@ async function exibirTermoConsentimento(callback) {
 
       <div style="display:flex;gap:12px">
         <button class="btn-sec" style="flex:1" onclick="navegarColab('home',null)">Voltar</button>
-        <button class="btn-p" id="btn-aceitar" style="flex:2;opacity:.4;cursor:not-allowed" disabled onclick="aceitarTermo(function(){ ${callback.toString().replace(/"/g,"'")} })">
+        <button class="btn-p" id="btn-aceitar" style="flex:2;opacity:.4;cursor:not-allowed" disabled onclick="aceitarTermo()"/g,"'")} })">
           Aceitar e iniciar diagnóstico →
         </button>
       </div>
@@ -2956,7 +2956,7 @@ function toggleAceite(el) {
   }
 }
 
-async function aceitarTermo(callback) {
+async function aceitarTermo() {
   if (!perfil?.id) return;
 
   await sb.from('consentimentos_lgpd').insert({
