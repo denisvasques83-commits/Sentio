@@ -973,14 +973,18 @@ async function renderConteudos() {
         '<div style="font-size:14px;font-weight:500;color:var(--ink)">' + tg.nome + '</div>' +
         (isRec ? '<span class="tag-verde">Recomendada</span>' : '') +
       '</div>' +
-      '<div class="cont-grid">' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
         tg.conteudos.map(function(c) {
-          return '<div class="cont-card" onclick="abrirModulo(' + c.id + ')">' +
-            '<div class="cont-capa" style="background:linear-gradient(135deg,' + (c.cor_capa || '#1B3A34') + ',' + (c.cor_capa || '#1B3A34') + '99)">' + (c.emoji || '📋') + '</div>' +
-            '<div class="cont-body">' +
-              '<div class="cont-cat">' + (c.categoria || '') + '</div>' +
-              '<div class="cont-titulo">' + c.titulo + '</div>' +
-              '<div class="cont-tempo">⏱ ' + (c.tempo_estimado || 5) + ' min · ' + (c.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</div>' +
+          return '<div onclick="abrirModulo(\'' + c.id + '\')" style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:12px;cursor:pointer;border:1px solid var(--neutro2);background:var(--branco);transition:background .15s" onmouseenter="this.style.background=\'#f7f5f0\'" onmouseleave="this.style.background=\'var(--branco)\'">' +
+            '<div style="width:36px;height:36px;border-radius:10px;background:' + (c.cor_capa || '#1B3A34') + '22;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">' + (c.emoji || '📋') + '</div>' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--dourado);margin-bottom:3px">' + (c.categoria || '') + '</div>' +
+              '<div style="font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + c.titulo + '</div>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:12px;flex-shrink:0">' +
+              '<span style="font-size:11px;color:var(--ink2)">' + (c.tempo_estimado || 5) + ' min</span>' +
+              '<span style="font-size:11px;color:var(--ink2);background:var(--neutro2);padding:2px 8px;border-radius:100px">' + (c.tipo_conteudo === 'video' ? 'Vídeo' : c.tipo_conteudo === 'audio' ? 'Áudio' : 'Leitura') + '</span>' +
+              '<span style="font-size:12px;color:var(--dourado);font-weight:500">→</span>' +
             '</div>' +
           '</div>';
         }).join('') +
@@ -1193,7 +1197,11 @@ async function abrirModuloConteudo(moduloId, trilhaId) {
 
   var btnVoltar = document.createElement('div');
   btnVoltar.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:24px';
-  btnVoltar.innerHTML = '<button class="btn-sec" style="font-size:12px" onclick="abrirTrilhaPorId(' + trilhaId + ')">← Voltar à trilha</button>';
+  if (trilhaId && trilhaId !== 'null') {
+    btnVoltar.innerHTML = '<button class="btn-sec" style="font-size:12px" onclick="abrirTrilhaPorId(' + trilhaId + ')">← Voltar à trilha</button>';
+  } else {
+    btnVoltar.innerHTML = '<button class="btn-sec" style="font-size:12px" onclick="renderConteudos()">← Voltar</button>';
+  }
   wrapper.appendChild(btnVoltar);
 
   var card = document.createElement('div');
@@ -1334,8 +1342,13 @@ function exibirTelaConclusaoTrilha(trilhaId, scoreAntes, scoreDepois, eixoCampo)
 }
 
 function abrirModulo(id) {
-  navegarColab('conteudos', null);
-  setTimeout(function() { abrirModuloConteudo(id, null); }, 100);
+  // Garantir que a seção de conteúdos está visível
+  var el = document.getElementById('sec-colab-cont');
+  if (!el) return;
+  // Mostrar tela de conteúdos se não estiver visível
+  document.querySelectorAll('#tela-colaborador .tela-sec').forEach(function(s) { s.style.display = 'none'; });
+  el.style.display = 'block';
+  abrirModuloConteudo(id, null);
 }
 async function renderAlertas() {
   const empresaId = perfil?.empresa_id;
