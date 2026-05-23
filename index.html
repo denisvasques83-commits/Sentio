@@ -2842,14 +2842,13 @@ async function exibirTermoConsentimento(callback) {
   const jaAceitou = await verificarConsentimento();
   if (jaAceitou) { callback(); return; }
 
-  // Usar home ou diag-form-area dependendo do que estiver visível
-  var el = document.getElementById('diag-form-area');
-  var useHome = false;
-  var homeEl = document.getElementById('sec-colab-home');
-  if (homeEl && homeEl.style.display !== 'none') {
-    el = homeEl;
-    useHome = true;
-  }
+  // Sempre usar sec-colab-home para o termo, escondendo outras seções
+  var secoes = ['sec-colab-home', 'sec-colab-diag', 'sec-colab-cont'];
+  secoes.forEach(function(s) {
+    var sec = document.getElementById(s);
+    if (sec) sec.style.display = s === 'sec-colab-home' ? 'block' : 'none';
+  });
+  var el = document.getElementById('sec-colab-home');
   el.innerHTML = `
     <div style="max-width:640px;margin:0 auto">
       <div style="text-align:center;margin-bottom:28px">
@@ -2967,6 +2966,10 @@ async function aceitarTermo() {
     data_aceite:    new Date().toISOString(),
     texto_termo:    'Termo de Consentimento Sentio v' + VERSAO_TERMO
   });
+
+  // Limpar sec-colab-home
+  var homeEl = document.getElementById('sec-colab-home');
+  if (homeEl) homeEl.innerHTML = '';
 
   if (window._lgpdCallback) window._lgpdCallback();
 }
