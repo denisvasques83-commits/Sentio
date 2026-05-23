@@ -312,6 +312,7 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
         <div class="nav-item on" onclick="navegarColab('home',this)">Início</div>
         <div class="nav-item" onclick="navegarColab('diagnostico',this)">Meu diagnóstico</div>
         <div class="nav-item" onclick="navegarColab('conteudos',this)">Conteúdos</div>
+        <div class="nav-item" onclick="navegarColab('coach',this)">IA Coach ✦</div>
         <div class="s-lbl" style="margin-top:16px">Conta</div>
         <div class="nav-item" onclick="navegarColab('sessoes',this)">Minhas sessões</div>
         <div class="nav-item" onclick="exibirDireitosLGPD()">Meus dados</div>
@@ -344,6 +345,7 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
       </div>
       <div id="sec-colab-sess" class="m-content" style="display:none"></div>
       <div id="sec-colab-cont" class="m-content" style="display:none"></div>
+      <div id="sec-colab-coach" class="m-content" style="display:none"></div>
     </main>
   </div>
 </div>
@@ -631,15 +633,17 @@ function navegarColab(secao, el) {
   if (secao === 'home') { abrirHomeColaborador(); return; }
   document.querySelectorAll('#tela-colaborador .nav-item').forEach(n => n.classList.remove('on'));
   if (el) el.classList.add('on');
-  ['home','diag','sess','cont'].forEach(s => {
+  ['home','diag','sess','cont','coach'].forEach(s => {
     var sec = document.getElementById('sec-colab-'+s);
     if (sec) sec.style.display = (
       (secao==='diagnostico'&&s==='diag')||
-      (secao==='sessoes'&&s==='sess')||(secao==='conteudos'&&s==='cont')
+      (secao==='sessoes'&&s==='sess')||(secao==='conteudos'&&s==='cont')||
+      (secao==='coach'&&s==='coach')
     ) ? 'block' : 'none';
   });
   // 'diagnostico' no menu = ver histórico, não iniciar novo
   if (secao === 'diagnostico') verHistoricoDiagnostico();
+  if (secao === 'coach') renderCoach();
   // 'iniciar-diagnostico' = fluxo de novo diagnóstico (com verificação de ciclo)
   if (secao === 'iniciar-diagnostico') iniciarDiagnostico();
 }
@@ -3145,7 +3149,8 @@ function exportarRelatorioPDF(dados) {
         body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
         .no-print { display:none; }
       }
-    </style>
+    @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+</style>
   `;
 
   const metricaNivel = mediaScore >= 70 ? 'Baixo' : mediaScore >= 40 ? 'Médio' : 'Alto';
@@ -4469,6 +4474,203 @@ function extrairYoutubeId(url) {
     if (match) return match[1];
   }
   return null;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// IA COACH — SENTIO
+// ══════════════════════════════════════════════════════════════════
+
+var _coachHistorico = []; // histórico da sessão atual
+
+async function renderCoach() {
+  var sec = document.getElementById('sec-colab-coach');
+  if (!sec) return;
+
+  // Mostrar interface do chat
+  sec.innerHTML = `
+    <div style="display:flex;flex-direction:column;height:calc(100vh - 120px);max-width:720px">
+      <div style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--verde);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✦</div>
+          <div>
+            <div class="s-titulo" style="margin-bottom:0">Nina — IA Coach</div>
+            <div style="font-size:12px;color:var(--ink2)">Psicóloga virtual · Conversa sigilosa</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="coach-msgs" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:16px;padding-right:4px"></div>
+
+      <div style="background:white;border:1px solid var(--neutro2);border-radius:14px;padding:12px 16px;margin-top:12px">
+        <textarea id="coach-input" placeholder="Escreva aqui..." style="width:100%;border:none;outline:none;font-family:Nunito,sans-serif;font-size:14px;color:var(--ink);resize:none;min-height:52px;max-height:120px;background:transparent" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMsgCoach();}"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <div style="font-size:11px;color:var(--ink2)">Enter para enviar · Shift+Enter para nova linha</div>
+          <button onclick="enviarMsgCoach()" id="btn-coach-enviar" style="background:var(--verde);color:var(--neutro);border:none;border-radius:8px;padding:8px 18px;font-family:Nunito,sans-serif;font-size:13px;font-weight:500;cursor:pointer">Enviar</button>
+        </div>
+      </div>
+
+      <div style="font-size:10px;color:var(--ink2);text-align:center;margin-top:8px;line-height:1.5">
+        Nina é uma IA de suporte emocional. Não substitui acompanhamento psicológico profissional.<br>
+        Em situações de crise, acione o CVV: 188 ou <a href="https://cvv.org.br" target="_blank" style="color:var(--dourado)">cvv.org.br</a>
+      </div>
+    </div>
+  `;
+
+  // Buscar diagnóstico recente para personalizar o coach
+  var { data: diagRecente } = await sb.from('diagnosticos')
+    .select('*').eq('colaborador_id', perfil.id).eq('status', 'completo')
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+  var burnoutColab = diagRecente ? calcularIndiceBurnout(diagRecente) : null;
+
+  // Montar contexto para o sistema
+  window._coachContexto = {
+    nome: perfil?.nome?.split(' ')[0] || 'você',
+    cargo: perfil?.cargo || '',
+    burnout: burnoutColab ? {
+      indice: burnoutColab.indice,
+      faixa: burnoutColab.faixa,
+      exaustao: burnoutColab.dimensoes.exaustao,
+      despersonalizacao: burnoutColab.dimensoes.despersonalizacao,
+      realizacao: burnoutColab.dimensoes.baixa_realizacao
+    } : null
+  };
+
+  _coachHistorico = [];
+
+  // Mensagem inicial da Nina
+  var msgBurnoutCoach = burnoutColab && burnoutColab.indice > 50
+    ? ' Percebo que você está carregando bastante coisa. Estou aqui para ouvir e ajudar como puder.'
+    : ' Fico feliz em ver que seus indicadores estão dentro de um nível de atenção manejável.';
+
+  var msgInicial = burnoutColab
+    ? 'Olá, ' + window._coachContexto.nome + '! Sou a Nina, sua coach de bem-estar aqui no Sentio. \n\nVi que você completou seu diagnóstico recentemente.' + msgBurnoutCoach + '\n\nComo você está se sentindo hoje?'
+    : 'Olá, ' + window._coachContexto.nome + '! Sou a Nina, sua coach de bem-estar aqui no Sentio. \n\nEstou aqui para conversar sobre como você está se sentindo e apoiar sua jornada.\n\nComo você está hoje?';
+
+  adicionarMsgCoach('nina', msgInicial);
+}
+
+function adicionarMsgCoach(tipo, texto) {
+  var msgs = document.getElementById('coach-msgs');
+  if (!msgs) return;
+
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:10px;align-items:flex-start;' + (tipo === 'usuario' ? 'flex-direction:row-reverse' : '');
+
+  var avatar = document.createElement('div');
+  avatar.style.cssText = 'width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;' +
+    (tipo === 'nina' ? 'background:var(--verde);color:var(--neutro)' : 'background:var(--neutro2);color:var(--ink)');
+  avatar.textContent = tipo === 'nina' ? '✦' : (perfil?.nome || 'U')[0].toUpperCase();
+
+  var bubble = document.createElement('div');
+  bubble.style.cssText = 'max-width:80%;padding:12px 16px;border-radius:' +
+    (tipo === 'nina' ? '4px 14px 14px 14px' : '14px 4px 14px 14px') +
+    ';font-size:13px;line-height:1.7;white-space:pre-wrap;' +
+    (tipo === 'nina' ? 'background:white;border:1px solid var(--neutro2);color:var(--ink)' : 'background:var(--verde);color:var(--neutro)');
+  bubble.textContent = texto;
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function adicionarLoadingCoach() {
+  var msgs = document.getElementById('coach-msgs');
+  if (!msgs) return;
+  var div = document.createElement('div');
+  div.id = 'coach-loading';
+  div.style.cssText = 'display:flex;gap:10px;align-items:flex-start';
+  div.innerHTML = '<div style="width:32px;height:32px;border-radius:50%;background:var(--verde);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--neutro)">✦</div>' +
+    '<div style="background:white;border:1px solid var(--neutro2);border-radius:4px 14px 14px 14px;padding:12px 16px">' +
+      '<div style="display:flex;gap:4px;align-items:center">' +
+        '<div style="width:6px;height:6px;border-radius:50%;background:var(--ink2);animation:pulse 1s infinite"></div>' +
+        '<div style="width:6px;height:6px;border-radius:50%;background:var(--ink2);animation:pulse 1s .2s infinite"></div>' +
+        '<div style="width:6px;height:6px;border-radius:50%;background:var(--ink2);animation:pulse 1s .4s infinite"></div>' +
+      '</div>' +
+    '</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function enviarMsgCoach() {
+  var input = document.getElementById('coach-input');
+  var btn = document.getElementById('btn-coach-enviar');
+  var texto = input.value.trim();
+  if (!texto || btn.disabled) return;
+
+  input.value = '';
+  btn.disabled = true;
+  input.style.height = '52px';
+
+  adicionarMsgCoach('usuario', texto);
+  adicionarLoadingCoach();
+
+  // Adicionar ao histórico
+  _coachHistorico.push({ role: 'user', content: texto });
+
+  // System prompt personalizado
+  var ctx = window._coachContexto || {};
+  var burnoutCtx = ctx.burnout
+    ? '- Índice de bem-estar: ' + ctx.burnout.indice + '/100 (faixa: ' + ctx.burnout.faixa + ')\n' +
+      '- Energia: ' + ctx.burnout.exaustao + '/100\n' +
+      '- Conexão com trabalho: ' + ctx.burnout.despersonalizacao + '/100\n' +
+      '- Senso de propósito: ' + ctx.burnout.realizacao + '/100'
+    : '- Diagnóstico não realizado ainda';
+
+  var systemPrompt = 'Você é Nina, uma psicóloga virtual acolhedora e empática do Sentio, plataforma de saúde mental corporativa.\n\n' +
+    'IDENTIDADE:\n- Nome: Nina\n- Tom: caloroso, acolhedor, sem jargões técnicos\n- Idioma: sempre português brasileiro\n\n' +
+    'CONTEXTO DO USUÁRIO:\n' +
+    '- Nome: ' + (ctx.nome || 'colaborador') + '\n' +
+    '- Cargo: ' + (ctx.cargo || 'não informado') + '\n' +
+    burnoutCtx + '\n\n' +
+    'REGRAS:\n' +
+    '1. NUNCA faça diagnóstico clínico\n' +
+    '2. NUNCA diga que substitui psicólogo real\n' +
+    '3. Crise grave: direcione ao CVV 188 imediatamente\n' +
+    '4. Respostas curtas de 3-5 frases\n' +
+    '5. Valide sentimentos antes de sugerir\n' +
+    '6. Estratégias práticas para o trabalho';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: _coachHistorico
+      })
+    });
+
+    var data = await response.json();
+    var resposta = data.content?.[0]?.text || 'Desculpe, não consegui processar sua mensagem. Tente novamente.';
+
+    // Remover loading
+    var loading = document.getElementById('coach-loading');
+    if (loading) loading.remove();
+
+    adicionarMsgCoach('nina', resposta);
+    _coachHistorico.push({ role: 'assistant', content: resposta });
+
+    // Salvar conversa no banco (assíncrono, sem bloquear)
+    if (perfil?.id) {
+      sb.from('coach_sessoes').upsert({
+        colaborador_id: perfil.id,
+        empresa_id: perfil.empresa_id,
+        historico: JSON.stringify(_coachHistorico),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'colaborador_id' }).then(function() {}).catch(function() {});
+    }
+
+  } catch(e) {
+    var loading = document.getElementById('coach-loading');
+    if (loading) loading.remove();
+    adicionarMsgCoach('nina', 'Estou com dificuldade de conexão agora. Tente novamente em instantes.');
+  }
+
+  btn.disabled = false;
 }
 
 function adminNavegar(secao, el) {
