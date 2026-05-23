@@ -2384,19 +2384,64 @@ async function finalizarDiagnostico() {
     }).eq('id', diagnosticoId);
   }
   document.getElementById('diag-form-area').style.display = 'none';
+  // Calcular burnout e trilhas para mostrar no resultado
+  var burnoutResult = calcularIndiceBurnout(scores);
+  var trilhasResult = calcularTrilhasRecomendadas(scores);
+
+  // Mensagem humanizada
+  var msgResult = '';
+  if (burnoutResult) {
+    if (burnoutResult.indice <= 25) msgResult = 'Seus indicadores estão equilibrados. Continue cuidando de você.';
+    else if (burnoutResult.indice <= 50) msgResult = 'Identificamos alguns pontos que merecem atenção. Preparamos trilhas especialmente para você.';
+    else if (burnoutResult.indice <= 75) msgResult = 'Você está carregando bastante coisa. É importante cuidar de si agora. Veja as trilhas abaixo.';
+    else msgResult = 'Estamos aqui com você. As trilhas e recursos abaixo podem ajudar neste momento.';
+  }
+
+  var secDiag = document.getElementById('sec-colab-diag');
+  secDiag.style.display = 'block';
+  document.getElementById('sec-colab-home').style.display = 'none';
+  document.getElementById('sec-colab-cont').style.display = 'none';
+
   document.getElementById('diag-result-area').style.display = 'block';
-  document.getElementById('diag-result-area').innerHTML = `
-    <div class="d-resultado">
-      <span class="res-icon">${nivelRisco === 'baixo' ? '✅' : nivelRisco === 'medio' ? '⚠️' : '🔴'}</span>
-      <div class="res-titulo">Diagnóstico concluído</div>
-      <div class="res-desc">Obrigado por responder. Seus dados foram processados com segurança e contribuem para melhorar o ambiente de trabalho da sua empresa.</div>
-      <div class="res-nivel n-${nivelRisco}">
-        ${nivelRisco === 'baixo' ? '✓ Nível de atenção: Baixo' : nivelRisco === 'medio' ? '⚠ Nível de atenção: Médio' : '⚠ Nível de atenção: Alto'}
-      </div>
-      ${nivelRisco !== 'baixo' ? '<p style="font-size:13px;color:var(--ink2);margin-bottom:24px">Com base no seu diagnóstico, recomendamos agendar uma conversa com um psicólogo. É confidencial e gratuito pelo programa da empresa.</p>' : '<p style="font-size:13px;color:var(--ink2);margin-bottom:24px">Seu resultado indica um ambiente saudável. Continue cuidando do seu bem-estar!</p>'}
-      <button class="btn-p" onclick="navegarColab('home', null)">Voltar ao início</button>
-    </div>
-  `;
+
+  // Trilhas HTML
+  var trilhasHTML = '';
+  if (trilhasResult && trilhasResult.length > 0) {
+    trilhasHTML = '<div style="margin-top:28px;text-align:left">' +
+      '<div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:12px">Trilhas recomendadas para você</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+      trilhasResult.slice(0,3).map(function(t) {
+        return '<div onclick="abrirTrilhaPorId(' + t.id + ')" style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:12px;cursor:pointer;border:1px solid var(--neutro2);background:var(--branco)">' +
+          '<div style="width:36px;height:36px;border-radius:10px;background:var(--neutro2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">' + t.emoji + '</div>' +
+          '<div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--ink)">' + t.nome + '</div><div style="font-size:11px;color:var(--ink2);margin-top:2px">' + t.motivo + '</div></div>' +
+          '<span style="font-size:12px;color:var(--dourado);font-weight:500">Iniciar →</span>' +
+        '</div>';
+      }).join('') +
+      '</div></div>';
+  }
+
+  document.getElementById('diag-result-area').innerHTML =
+    '<div class="d-resultado">' +
+      '<span class="res-icon">' + (nivelRisco === 'baixo' ? '✅' : nivelRisco === 'medio' ? '⚠️' : '🔴') + '</span>' +
+      '<div class="res-titulo">Diagnóstico concluído</div>' +
+      '<div class="res-desc">' + msgResult + '</div>' +
+      (burnoutResult ? '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0;text-align:center">' +
+        '<div style="background:var(--neutro2);border-radius:10px;padding:12px">' +
+          '<div style="font-size:22px;font-weight:300;color:var(--ink)">' + burnoutResult.dimensoes.exaustao + '</div>' +
+          '<div style="font-size:10px;color:var(--ink2);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Exaustão</div>' +
+        '</div>' +
+        '<div style="background:var(--neutro2);border-radius:10px;padding:12px">' +
+          '<div style="font-size:22px;font-weight:300;color:var(--ink)">' + burnoutResult.dimensoes.despersonalizacao + '</div>' +
+          '<div style="font-size:10px;color:var(--ink2);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Distanciamento</div>' +
+        '</div>' +
+        '<div style="background:var(--neutro2);border-radius:10px;padding:12px">' +
+          '<div style="font-size:22px;font-weight:300;color:var(--ink)">' + burnoutResult.dimensoes.baixa_realizacao + '</div>' +
+          '<div style="font-size:10px;color:var(--ink2);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Realização</div>' +
+        '</div>' +
+      '</div>' : '') +
+      trilhasHTML +
+      '<button class="btn-p" style="margin-top:24px;width:100%" onclick="abrirHomeColaborador()">Ver minha página inicial →</button>' +
+    '</div>';
 }
 // ══════════════════════════════════════════════════════════════════
 // MÓDULO: SETORES CONFIGURÁVEIS
