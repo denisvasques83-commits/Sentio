@@ -1131,6 +1131,12 @@ async function abrirTrilhaPorId(trilhaId) {
 }
 
 async function abrirTrilha(trilhaId, info) {
+  // Garantir que a seção correta está visível
+  var secoes = ['sec-colab-home', 'sec-colab-diag', 'sec-colab-cont'];
+  secoes.forEach(function(s) {
+    var sec = document.getElementById(s);
+    if (sec) sec.style.display = s === 'sec-colab-cont' ? 'block' : 'none';
+  });
   var el = document.getElementById('sec-colab-cont');
   if (!el) return;
 
@@ -1224,6 +1230,12 @@ async function abrirTrilha(trilhaId, info) {
 
 // ── Abrir módulo e marcar como concluído ──────────────────────────
 async function abrirModuloConteudo(moduloId, trilhaId) {
+  // Garantir que a seção está visível
+  var secoes = ['sec-colab-home', 'sec-colab-diag', 'sec-colab-cont'];
+  secoes.forEach(function(s) {
+    var sec = document.getElementById(s);
+    if (sec) sec.style.display = s === 'sec-colab-cont' ? 'block' : 'none';
+  });
   var el = document.getElementById('sec-colab-cont');
   if (!el) return;
 
