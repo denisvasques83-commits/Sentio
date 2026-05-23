@@ -900,7 +900,8 @@ async function renderDashboard() {
     if (idColabs.length > 0) {
       const { data: diagsData } = await sb.from('diagnosticos').select('*')
         .eq('empresa_id', empresaId).eq('status', 'completo')
-        .in('colaborador_id', idColabs);
+        .in('colaborador_id', idColabs)
+        .order('created_at', { ascending: true });
       diags = diagsData || [];
     }
     // Contar colaboradores únicos que fizeram diagnóstico (não total de diagnósticos)
@@ -923,7 +924,39 @@ async function renderDashboard() {
 
   // Calcular índice de burnout da empresa
   var burnoutEmpresa = null;
+  var tendencia = null; // { diff, direcao }
+  var historicoCiclos = []; // para o gráfico
+
   if (diags && diags.length > 0) {
+    // Agrupar por mês/ciclo para histórico
+    var porCiclo = {};
+    diags.forEach(function(d) {
+      var mes = new Date(d.created_at).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      if (!porCiclo[mes]) porCiclo[mes] = [];
+      porCiclo[mes].push(d);
+    });
+
+    historicoCiclos = Object.keys(porCiclo).map(function(mes) {
+      var cicloScores = porCiclo[mes].map(calcularIndiceBurnout).filter(Boolean);
+      var media = cicloScores.length > 0
+        ? Math.round(cicloScores.reduce(function(a,b){return a+b.indice;},0)/cicloScores.length)
+        : 0;
+      return { mes, media };
+    });
+
+    // Calcular tendência comparando último vs penúltimo ciclo
+    if (historicoCiclos.length >= 2) {
+      var ultimo = historicoCiclos[historicoCiclos.length - 1].media;
+      var penultimo = historicoCiclos[historicoCiclos.length - 2].media;
+      var diff = ultimo - penultimo;
+      tendencia = {
+        diff: Math.abs(diff),
+        direcao: diff > 0 ? 'subiu' : diff < 0 ? 'caiu' : 'estavel',
+        cor: diff > 0 ? '#C0392B' : diff < 0 ? '#2A7A4B' : '#888780'
+      };
+    }
+
+    // Burnout atual
     var burnoutScores = diags.map(calcularIndiceBurnout).filter(Boolean);
     if (burnoutScores.length > 0) {
       var mediaBI = Math.round(burnoutScores.reduce(function(a,b){return a+b.indice;},0)/burnoutScores.length);
@@ -977,6 +1010,7 @@ async function renderDashboard() {
         <div>
           <div style="font-family:'Nunito',sans-serif;font-size:64px;font-weight:300;color:var(--neutro);line-height:1">${biScore || '--'}</div>
           ${biFaixa ? '<div style="display:inline-block;padding:4px 14px;border-radius:100px;background:' + corBI + '33;margin-top:6px"><span style="font-size:12px;font-weight:600;color:' + corBI + '">' + biFaixa + '</span></div>' : ''}
+          ${tendencia ? '<div style="display:inline-block;padding:3px 12px;border-radius:100px;background:' + tendencia.cor + '22;margin-top:6px;margin-left:6px"><span style="font-size:11px;font-weight:600;color:' + tendencia.cor + '">' + (tendencia.direcao === 'subiu' ? '↑' : tendencia.direcao === 'caiu' ? '↓' : '→') + ' ' + tendencia.diff + ' pts desde o ciclo anterior</span></div>' : ''}
         </div>
         <div style="flex:1;min-width:200px;padding-bottom:8px">
           <div style="font-size:13px;color:rgba(246,244,240,.6);line-height:1.6;margin-bottom:14px">${biDesc}</div>
@@ -1021,6 +1055,18 @@ async function renderDashboard() {
         <div class="loading">Carregando...</div>
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="s-card" id="grafico-ciclos">
+        <div class="s-titulo" style="margin-bottom:3px">Evolução do burnout</div>
+        <div class="s-sub">Índice médio ciclo a ciclo</div>
+        <div class="loading">Carregando...</div>
+      </div>
+      <div class="s-card" id="score-lideranca">
+        <div class="s-titulo" style="margin-bottom:3px">Score por nível</div>
+        <div class="s-sub">Burnout por hierarquia</div>
+        <div class="loading">Carregando...</div>
+      </div>
+    </div>
 
     <div class="s-card" id="alerta-adesao" style="display:none;border-left:3px solid var(--alto);background:#FFF8F8"></div>
     <div class="s-card" id="eixo-critico" style="display:none;border-left:3px solid var(--dourado);margin-bottom:16px"></div>
@@ -1043,6 +1089,12 @@ async function renderDashboard() {
 
   // Renderizar plano de ação
   renderPlanoAcao();
+
+  // Gráfico de evolução ciclo a ciclo
+  renderGraficoCiclos(historicoCiclos);
+
+  // Score por nível hierárquico
+  if (empresaId) renderScoreLideranca(empresaId, diags);
 
   // Calcular eixo mais crítico
   if (diags && diags.length > 0) {
@@ -4942,6 +4994,127 @@ async function salvarPlanoAcao() {
 
   document.getElementById('modal-plano-acao').style.display = 'none';
   renderPlanoAcao();
+}
+
+function renderGraficoCiclos(historicoCiclos) {
+  var el = document.getElementById('grafico-ciclos');
+  if (!el) return;
+
+  if (!historicoCiclos || historicoCiclos.length < 2) {
+    el.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Evolução do burnout</div>' +
+      '<div class="s-sub">Índice médio ciclo a ciclo</div>' +
+      '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Disponível a partir do segundo ciclo de diagnósticos.</p>';
+    return;
+  }
+
+  var W = 420, H = 160, pad = { top: 16, right: 16, bottom: 28, left: 36 };
+  var iW = W - pad.left - pad.right;
+  var iH = H - pad.top - pad.bottom;
+
+  var vals = historicoCiclos.map(function(c) { return c.media; });
+  var minV = Math.max(0, Math.min.apply(null, vals) - 10);
+  var maxV = Math.min(100, Math.max.apply(null, vals) + 10);
+
+  function xPos(i) { return pad.left + (i / (historicoCiclos.length - 1)) * iW; }
+  function yPos(v) { return pad.top + iH - ((v - minV) / (maxV - minV)) * iH; }
+
+  // Linha
+  var pontos = historicoCiclos.map(function(c, i) { return xPos(i) + ',' + yPos(c.media); }).join(' ');
+  // Área preenchida
+  var areaPath = 'M' + xPos(0) + ',' + (pad.top + iH) +
+    ' L' + historicoCiclos.map(function(c, i) { return xPos(i) + ',' + yPos(c.media); }).join(' L') +
+    ' L' + xPos(historicoCiclos.length - 1) + ',' + (pad.top + iH) + ' Z';
+
+  // Faixas de referência
+  var y50 = yPos(50), y75 = yPos(75);
+
+  var svg = '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">' +
+    // Faixas
+    '<rect x="' + pad.left + '" y="' + pad.top + '" width="' + iW + '" height="' + (y50 - pad.top) + '" fill="#FFEBEE" opacity=".4"/>' +
+    '<rect x="' + pad.left + '" y="' + y50 + '" width="' + iW + '" height="' + (y75 - y50) + '" fill="#FFF8E1" opacity=".4"/>' +
+    '<rect x="' + pad.left + '" y="' + y75 + '" width="' + iW + '" height="' + (pad.top + iH - y75) + '" fill="#E1F5EE" opacity=".4"/>' +
+    // Labels faixas
+    '<text x="' + (pad.left + 3) + '" y="' + (pad.top + 10) + '" font-size="8" fill="#C0392B" opacity=".6">Crítico</text>' +
+    '<text x="' + (pad.left + 3) + '" y="' + (y50 + 10) + '" font-size="8" fill="#D4860A" opacity=".6">Atenção</text>' +
+    '<text x="' + (pad.left + 3) + '" y="' + (y75 + 10) + '" font-size="8" fill="#2A7A4B" opacity=".6">Saudável</text>' +
+    // Área
+    '<path d="' + areaPath + '" fill="var(--verde)" opacity=".12"/>' +
+    // Linha
+    '<polyline points="' + pontos + '" fill="none" stroke="var(--verde)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+    // Pontos e labels
+    historicoCiclos.map(function(c, i) {
+      var x = xPos(i), y = yPos(c.media);
+      var corPonto = c.media > 75 ? '#C0392B' : c.media > 50 ? '#D4860A' : '#2A7A4B';
+      return '<circle cx="' + x + '" cy="' + y + '" r="4" fill="' + corPonto + '" stroke="white" stroke-width="1.5"/>' +
+        '<text x="' + x + '" y="' + (y - 8) + '" text-anchor="middle" font-size="9" font-weight="600" fill="' + corPonto + '">' + c.media + '</text>' +
+        '<text x="' + x + '" y="' + (H - 4) + '" text-anchor="middle" font-size="8" fill="var(--ink2)">' + c.mes + '</text>';
+    }).join('') +
+  '</svg>';
+
+  el.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Evolução do burnout</div>' +
+    '<div class="s-sub" style="margin-bottom:12px">Índice médio ciclo a ciclo</div>' +
+    svg;
+}
+
+async function renderScoreLideranca(empresaId, diags) {
+  var el = document.getElementById('score-lideranca');
+  if (!el || !diags || diags.length === 0) return;
+
+  // Buscar perfis com nível hierárquico
+  var { data: perfisData } = await sb.from('perfis')
+    .select('id, nivel_hierarquico')
+    .eq('empresa_id', empresaId)
+    .eq('tipo_usuario', 'colaborador');
+
+  if (!perfisData) return;
+
+  var nivelMap = {};
+  perfisData.forEach(function(p) { nivelMap[p.id] = p.nivel_hierarquico || 'operacional'; });
+
+  var porNivel = { estrategico: [], tatico: [], operacional: [] };
+  diags.forEach(function(d) {
+    var nivel = nivelMap[d.colaborador_id] || 'operacional';
+    var b = calcularIndiceBurnout(d);
+    if (b) {
+      if (!porNivel[nivel]) porNivel[nivel] = [];
+      porNivel[nivel].push(b.indice);
+    }
+  });
+
+  var niveis = [
+    { key: 'estrategico', label: 'Estratégico', emoji: '👔' },
+    { key: 'tatico', label: 'Tático', emoji: '🎯' },
+    { key: 'operacional', label: 'Operacional', emoji: '⚙️' }
+  ];
+
+  var temDados = niveis.some(function(n) { return porNivel[n.key] && porNivel[n.key].length > 0; });
+
+  if (!temDados) {
+    el.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Score por nível</div>' +
+      '<div class="s-sub">Burnout por hierarquia</div>' +
+      '<p style="font-size:12px;color:var(--ink2);text-align:center;padding:20px 0">Disponível quando o nível hierárquico estiver preenchido nos perfis.</p>';
+    return;
+  }
+
+  el.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Score por nível</div>' +
+    '<div class="s-sub" style="margin-bottom:14px">Burnout médio por hierarquia</div>' +
+    niveis.map(function(n) {
+      var arr = porNivel[n.key] || [];
+      if (arr.length === 0) return '';
+      var media = Math.round(arr.reduce(function(a,b){return a+b;},0)/arr.length);
+      var cor = media > 75 ? '#C0392B' : media > 50 ? '#D4860A' : media > 25 ? '#EF9F27' : '#2A7A4B';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--neutro2)">' +
+        '<span style="font-size:18px">' + n.emoji + '</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--ink)">' + n.label + '</div>' +
+          '<div style="font-size:10px;color:var(--ink2)">' + arr.length + ' pessoa(s)</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:18px;font-weight:600;color:' + cor + '">' + media + '</div>' +
+          '<div style="font-size:9px;color:var(--ink2)">/ 100</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
 }
 
 function adminNavegar(secao, el) {
