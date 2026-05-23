@@ -3479,15 +3479,15 @@ function calcularIndiceBurnout(diag) {
     protocolo = 'Monitoramento trimestral. Trilhas de desenvolvimento opcional.';
   } else if (indice <= 50) {
     faixa = 'Atenção'; cor = 'var(--medio)'; corHex = '#D4860A';
-    descricao = 'Sinais precoces de esgotamento identificados. Intervenção preventiva recomendada.';
+    descricao = 'Alguns pontos merecem atenção. Você não está sozinho.';
     protocolo = 'Trilha de prevenção imediata. Reavaliação em 30 dias.';
   } else if (indice <= 75) {
     faixa = 'Risco moderado'; cor = '#E67E22'; corHex = '#E67E22';
-    descricao = 'Padrão consistente com burnout em desenvolvimento. Ação estruturada necessária.';
+    descricao = 'Você está carregando bastante coisa. As trilhas abaixo podem ajudar.';
     protocolo = 'Sessão psicológica recomendada. Revisão de carga de trabalho. Relatório ao RH.';
   } else {
     faixa = 'Risco crítico'; cor = 'var(--alto)'; corHex = '#C0392B';
-    descricao = 'Indicadores críticos de burnout. Intervenção imediata obrigatória conforme NR-01.';
+    descricao = 'Estamos aqui com você. Considere conversar com alguém de confiança.';
     protocolo = 'Encaminhamento urgente para psicólogo. Afastamento preventivo a avaliar. Notificação ao RH obrigatória.';
   }
 
@@ -3529,7 +3529,7 @@ function renderCardBurnout(burnout, compacto) {
   }
 
   return '<div style="background:var(--verde);border-radius:16px;padding:24px 28px;margin-bottom:20px">' +
-    '<div style="font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:12px">Índice de Burnout · Modelo Maslach · NR-01</div>' +
+    '<div style="font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dourado);margin-bottom:12px">Seu bem-estar psicossocial</div>' +
     '<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:16px">' +
       '<div style="font-family:Cormorant Garamond,serif;font-size:64px;font-weight:600;color:var(--neutro);line-height:1">' + burnout.indice + '</div>' +
       '<div style="padding-bottom:8px">' +
