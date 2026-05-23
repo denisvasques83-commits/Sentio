@@ -1294,8 +1294,15 @@ async function abrirModuloConteudo(moduloId, trilhaId) {
 
   var conteudoEl = document.createElement('div');
   conteudoEl.style.cssText = 'font-size:14px;color:var(--ink);line-height:1.9;white-space:pre-line';
-  conteudoEl.textContent = m.conteudo_texto || (m.url_conteudo ? '' : 'Conteúdo em breve.');
-  if (conteudoEl.textContent) card.appendChild(conteudoEl);
+  // Só adicionar texto se houver conteúdo
+  if (m.conteudo_texto && m.conteudo_texto.trim()) {
+    conteudoEl.textContent = m.conteudo_texto;
+    card.appendChild(conteudoEl);
+  } else if (!m.url_conteudo) {
+    conteudoEl.style.cssText = 'font-size:13px;color:var(--ink2);text-align:center;padding:32px 0';
+    conteudoEl.textContent = 'Conteúdo em produção. Disponível em breve.';
+    card.appendChild(conteudoEl);
+  }
 
   var rodapeEl = document.createElement('div');
   rodapeEl.style.cssText = 'margin-top:32px;padding-top:24px;border-top:1px solid var(--neutro2);text-align:center';
@@ -1970,13 +1977,30 @@ async function abrirHomeColaborador() {
     var bcEl = document.getElementById('burnout-colab-card');
     if (bcEl && burnoutColab) bcEl.innerHTML = renderCardBurnout(burnoutColab, false);
   }
-  const { data: conts } = await sb.from('conteudos').select('*').eq('ativo', true).limit(3).order('ordem');
+  // Buscar módulos com conteúdo real (prioritários) para recomendar
+  const { data: conts } = await sb.from('conteudos')
+    .select('*').eq('ativo', true)
+    .not('conteudo_texto', 'is', null)
+    .limit(4).order('modulo_ordem');
   const el = document.getElementById('conts-home');
-  if (el && conts) {
-    el.className = 'cont-grid';
+  if (el && conts && conts.length > 0) {
+    el.className = '';
+    el.style.cssText = 'display:flex;flex-direction:column;gap:8px';
     el.innerHTML = conts.map(function(c) {
-      return '<div class="cont-card"><div class="cont-capa" style="background:linear-gradient(135deg,' + c.cor_capa + ',' + c.cor_capa + '99)">' + c.emoji + '</div><div class="cont-body"><div class="cont-cat">' + c.categoria + '</div><div class="cont-titulo">' + c.titulo + '</div><div class="cont-tempo">⏱ ' + c.tempo_estimado + ' min · ' + (c.tipo_conteudo === 'video' ? 'Vídeo' : 'Artigo') + '</div></div></div>';
+      return '<div onclick="abrirModulo(\'' + c.id + '\')" style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:12px;cursor:pointer;border:1px solid var(--neutro2);background:var(--branco);transition:background .15s">' +
+        '<div style="width:36px;height:36px;border-radius:10px;background:' + (c.cor_capa || '#1B3A34') + '22;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">' + (c.emoji || '📋') + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--dourado);margin-bottom:3px">' + (c.categoria || '') + '</div>' +
+          '<div style="font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + c.titulo + '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">' +
+          '<span style="font-size:11px;color:var(--ink2)">' + (c.tempo_estimado || 5) + ' min</span>' +
+          '<span style="font-size:11px;color:var(--dourado);font-weight:500">→</span>' +
+        '</div>' +
+      '</div>';
     }).join('');
+  } else if (el) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:16px 0">Conteúdos personalizados aparecerão após o diagnóstico.</p>';
   }
 }
 
