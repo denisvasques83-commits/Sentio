@@ -256,6 +256,7 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
       <nav class="s-nav">
         <span class="s-lbl">Principal</span>
         <div class="nav-item on" onclick="navegarGestor('dashboard',this)">Dashboard</div>
+        <div class="nav-item" onclick="navegarGestor('onboarding',this)">Primeiros passos</div>
         <div class="nav-item" onclick="navegarGestor('relatorio',this)">Relatório NR-01</div>
         <div class="nav-item" onclick="navegarGestor('configuracoes',this)">Configurações</div>
         <span class="s-lbl" style="margin-top:16px">Análise</span>
@@ -266,7 +267,6 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
           <span id="badge-alertas" style="margin-left:auto;background:var(--alto);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;display:none">0</span>
         </div>
         <span class="s-lbl" style="margin-top:16px">Conta</span>
-        <div class="nav-item" onclick="navegarGestor('onboarding',this)">Primeiros passos</div>
         <div class="nav-item" onclick="exibirDireitosLGPD()">Meus dados</div>
         <div class="nav-item" style="margin-top:8px" onclick="sair()">Sair</div>
       </nav>
@@ -2283,6 +2283,12 @@ async function abrirHomeColaborador() {
     return;
   }
 
+  // 4. Verificar ciclo de 90 dias — calcular dias restantes para exibir na home
+  var diasDesdeUltimo = Math.floor((new Date() - new Date(diagRecente.created_at)) / (1000 * 60 * 60 * 24));
+  var cicloLiberado = diagRecente.liberado_gestor || diasDesdeUltimo >= 90;
+  var diasRestantes = cicloLiberado ? 0 : 90 - diasDesdeUltimo;
+  var proximoCiclo = cicloLiberado ? null : new Date(new Date(diagRecente.created_at).getTime() + 90*24*60*60*1000).toLocaleDateString('pt-BR');
+
   const temDiag = !!diagRecente;
 
   // Garantir que só sec-colab-home está visível
@@ -2319,7 +2325,8 @@ async function abrirHomeColaborador() {
       <p>${temDiag ? msgBurnout : 'Tudo que você compartilha é sigiloso. Seu gestor não vê suas respostas individuais.'}</p>
       <span class="badge ${temDiag ? 'b-ok' : 'b-pend'}">${temDiag ? '✓ Diagnóstico realizado' : '⚠ Diagnóstico pendente'}</span>
     </div>
-    ${burnoutColab ? '<div id="burnout-colab-card" style="margin-bottom:20px"></div>' : ''}
+    ${diasRestantes > 0 ? '<div style="background:white;border:1px solid var(--neutro2);border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px"><div style="font-size:24px">📋</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px">Diagnóstico em dia</div><div style="font-size:12px;color:var(--ink2)">Próximo ciclo disponível em <strong>' + diasRestantes + ' dias</strong> · ' + proximoCiclo + '</div></div></div>' : ''}
+  ${burnoutColab ? '<div id="burnout-colab-card" style="margin-bottom:20px"></div>' : ''}
     ${trilhasRec && trilhasRec.length > 0 ? '<div id="trilhas-colab-home" style="margin-bottom:24px"></div>' : ''}
     <div class="c-grid">
       <div class="c-card" onclick="navegarColab('diagnostico',null)">
