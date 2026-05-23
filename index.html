@@ -401,8 +401,8 @@ window.addEventListener('load', async () => {
     if (sessionData?.session) {
       usuario = sessionData.session.user;
       var nomeConvite = usuario.user_metadata?.nome || usuario.email?.split('@')[0] || '';
-      var el = document.getElementById('bv-nome');
-      if (el) el.textContent = 'Olá' + (nomeConvite ? ', ' + nomeConvite : '') + '!';
+      var bvEl = document.getElementById('bv-nome');
+      if (bvEl) bvEl.textContent = 'Olá' + (nomeConvite ? ', ' + nomeConvite : '') + '!';
       // Limpar hash da URL
       history.replaceState(null, '', window.location.pathname);
       trocarTela('tela-primeiro-acesso');
