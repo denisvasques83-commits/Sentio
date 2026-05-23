@@ -2098,9 +2098,34 @@ async function abrirHomeColaborador() {
   document.getElementById('titulo-colab').textContent = 'Olá, ' + ((perfil?.nome || '').split(' ')[0] || 'bem-vindo');
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   document.getElementById('data-hoje').textContent = hoje.charAt(0).toUpperCase() + hoje.slice(1);
+
+  // ── VERIFICAR FLUXO DE PRIMEIRO ACESSO ─────────────────────────
+  // 1. Verificar consentimento LGPD
+  const jaAceitou = await verificarConsentimento();
+  if (!jaAceitou) {
+    // Mostrar termo LGPD — após aceite vai para diagnóstico
+    var secHome = document.getElementById('sec-colab-home');
+    secHome.style.display = 'block';
+    document.getElementById('sec-colab-diag').style.display = 'none';
+    document.getElementById('sec-colab-cont').style.display = 'none';
+    await exibirTermoConsentimento(async function() {
+      // Após aceitar LGPD — ir direto para diagnóstico
+      await iniciarDiagnostico();
+    });
+    return;
+  }
+
+  // 2. Verificar se já fez diagnóstico
   const { data: diagRecente } = await sb.from('diagnosticos')
     .select('*').eq('colaborador_id', perfil.id).eq('status', 'completo')
-    .order('created_at', { ascending: false }).limit(1).single();
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+  // 3. Se não fez diagnóstico — ir direto para ele
+  if (!diagRecente) {
+    await iniciarDiagnostico();
+    return;
+  }
+
   const temDiag = !!diagRecente;
   document.getElementById('sec-colab-home').innerHTML = `
     <div class="c-welcome">
@@ -2817,7 +2842,14 @@ async function exibirTermoConsentimento(callback) {
   const jaAceitou = await verificarConsentimento();
   if (jaAceitou) { callback(); return; }
 
-  const el = document.getElementById('diag-form-area');
+  // Usar home ou diag-form-area dependendo do que estiver visível
+  var el = document.getElementById('diag-form-area');
+  var useHome = false;
+  var homeEl = document.getElementById('sec-colab-home');
+  if (homeEl && homeEl.style.display !== 'none') {
+    el = homeEl;
+    useHome = true;
+  }
   el.innerHTML = `
     <div style="max-width:640px;margin:0 auto">
       <div style="text-align:center;margin-bottom:28px">
