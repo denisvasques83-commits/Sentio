@@ -637,6 +637,18 @@ function navegarColab(secao, el) {
 
 async function abrirDashboardGestor() {
   trocarTela('tela-dashboard');
+
+  // Verificar se é primeiro acesso do gestor
+  if (perfil && !perfil._onboardingVisto) {
+    var { data: colabs } = await sb.from('perfis').select('id').eq('empresa_id', perfil.empresa_id).eq('tipo_usuario', 'colaborador');
+    var { data: setores } = await sb.from('setores_empresa').select('id').eq('empresa_id', perfil.empresa_id).eq('ativo', true);
+    var totalColabs = colabs?.length || 0;
+    var totalSetores = setores?.length || 0;
+    if (totalColabs === 0 || totalSetores === 0) {
+      perfil._onboardingVisto = true;
+      setTimeout(function() { mostrarOnboardingGestor(totalSetores, totalColabs); }, 500);
+    }
+  }
   document.getElementById('nome-gestor').textContent = perfil?.nome || 'Gestor';
   document.getElementById('av-gestor').textContent = (perfil?.nome || 'G')[0].toUpperCase();
   document.getElementById('cargo-gestor').textContent = perfil?.cargo || 'Gestor de RH';
@@ -647,6 +659,52 @@ async function abrirDashboardGestor() {
   await renderConteudos();
   await renderAlertas();
   await renderRelatorio();
+}
+
+function mostrarOnboardingGestor(totalSetores, totalColabs) {
+  var overlay = document.createElement('div');
+  overlay.id = 'overlay-onboarding';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var passos = [
+    { icone: '🏢', titulo: 'Criar setores', desc: 'Organize sua empresa por áreas. O heatmap de burnout será gerado por setor.', feito: totalSetores > 0, acao: "fecharOnboarding(); navegarGestor('configuracoes', null)" },
+    { icone: '✉', titulo: 'Convidar colaboradores', desc: 'Envie convites para sua equipe. Cada pessoa recebe um link para criar a senha.', feito: totalColabs > 0, acao: "fecharOnboarding(); navegarGestor('configuracoes', null)" },
+    { icone: '📋', titulo: 'Aguardar diagnósticos', desc: 'Quando a equipe responder, o Índice de Burnout e o Relatório NR-01 serão gerados automaticamente.', feito: false, acao: null },
+    { icone: '📄', titulo: 'Gerar Relatório NR-01', desc: 'Com os dados em mãos, acesse o relatório para exportar o PDF e cumprir a exigência legal.', feito: false, acao: "fecharOnboarding(); navegarGestor('relatorio', null)" }
+  ];
+
+  overlay.innerHTML = '<div style="background:var(--neutro);border-radius:20px;padding:40px;width:520px;max-width:90vw;max-height:90vh;overflow-y:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+      '<div>' +
+        '<div style="font-family:Nunito,sans-serif;font-size:20px;font-weight:700;color:var(--ink)">Bem-vindo ao Sentio</div>' +
+        '<div style="font-size:13px;color:var(--ink2);margin-top:4px">Siga os passos abaixo para configurar sua empresa</div>' +
+      '</div>' +
+      '<button onclick="fecharOnboarding()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink2);padding:4px">×</button>' +
+    '</div>' +
+    '<div style="height:0.5px;background:var(--neutro2);margin:20px 0"></div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px">' +
+    passos.map(function(p, i) {
+      return '<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:12px;background:' + (p.feito ? '#E1F5EE' : 'var(--neutro2)') + ';cursor:' + (p.acao ? 'pointer' : 'default') + '" ' + (p.acao ? 'onclick="' + p.acao + '"' : '') + '>' +
+        '<div style="width:36px;height:36px;border-radius:50%;background:' + (p.feito ? 'var(--baixo)' : 'white') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:' + (p.feito ? '16px' : '18px') + '">' +
+          (p.feito ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : p.icone) +
+        '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px">' + (i+1) + '. ' + p.titulo + '</div>' +
+          '<div style="font-size:12px;color:var(--ink2);line-height:1.5">' + p.desc + '</div>' +
+        '</div>' +
+        (p.acao && !p.feito ? '<div style="font-size:12px;color:var(--dourado);font-weight:500;flex-shrink:0;padding-top:2px">Fazer →</div>' : '') +
+      '</div>';
+    }).join('') +
+    '</div>' +
+    '<button onclick="fecharOnboarding()" style="width:100%;margin-top:20px;padding:14px;background:var(--verde);color:var(--neutro);border:none;border-radius:10px;font-family:Nunito,sans-serif;font-size:14px;font-weight:600;cursor:pointer">Entendido, vou configurar →</button>' +
+  '</div>';
+
+  document.body.appendChild(overlay);
+}
+
+function fecharOnboarding() {
+  var el = document.getElementById('overlay-onboarding');
+  if (el) el.remove();
 }
 
 async function renderDashboard() {
@@ -2478,6 +2536,7 @@ async function renderSetores() {
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-sec" onclick="renderConvites()">✉ Convidar colaboradores</button>
+        <button class="btn-sec" onclick="abrirModalCSV()">📋 Importar CSV</button>
         <button class="btn-pri" onclick="abrirModalSetor()">+ Novo setor</button>
       </div>
     </div>
@@ -2559,6 +2618,115 @@ function editarSetor(id, nome, desc) {
 
 function fecharModalSetor() {
   document.getElementById('modal-setor').style.display = 'none';
+}
+
+function abrirModalCSV() {
+  var modal = document.getElementById('modal-csv');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-csv';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML = '<div style="background:var(--neutro);border-radius:16px;padding:32px;width:520px;max-width:90vw;max-height:90vh;overflow-y:auto">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">' +
+        '<div class="s-titulo">Importar colaboradores por CSV</div>' +
+        '<button onclick="fecharModalCSV()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--ink2)">×</button>' +
+      '</div>' +
+      '<div style="background:var(--neutro2);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12px;color:var(--ink2);line-height:1.6">' +
+        '<strong style="color:var(--ink)">Formato esperado:</strong><br>' +
+        'Uma linha por colaborador, com os campos:<br>' +
+        '<code style="background:white;padding:2px 6px;border-radius:4px;font-size:11px">nome,email,cargo,setor,nivel</code><br><br>' +
+        'Exemplo:<br>' +
+        '<code style="background:white;padding:2px 6px;border-radius:4px;font-size:11px">João Silva,joao@empresa.com,Analista,Comercial,operacional</code>' +
+      '</div>' +
+      '<label class="lbl">Selecionar arquivo CSV</label>' +
+      '<input type="file" id="csv-input" accept=".csv,.txt" style="width:100%;padding:10px;border:1.5px solid var(--neutro2);border-radius:8px;font-family:Nunito,sans-serif;font-size:13px;margin-bottom:16px">' +
+      '<div id="csv-preview" style="display:none;margin-bottom:16px"></div>' +
+      '<div id="csv-feedback" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:13px"></div>' +
+      '<div style="display:flex;gap:12px">' +
+        '<button class="btn-sec" style="flex:1" onclick="fecharModalCSV()">Cancelar</button>' +
+        '<button class="btn-pri" style="flex:1" id="btn-importar-csv" onclick="processarCSV()" disabled>Importar</button>' +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+
+    document.getElementById('csv-input').addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var lines = ev.target.result.trim().split('\n').filter(function(l) { return l.trim(); });
+        var validas = lines.filter(function(l) { return l.includes(',') && l.split(',').length >= 2; });
+        var preview = document.getElementById('csv-preview');
+        preview.style.display = 'block';
+        preview.innerHTML = '<div style="font-size:12px;color:var(--ink2);margin-bottom:8px">' + validas.length + ' colaboradores encontrados</div>' +
+          '<div style="max-height:160px;overflow-y:auto;border:1px solid var(--neutro2);border-radius:8px">' +
+          validas.slice(0, 10).map(function(l) {
+            var p = l.split(',');
+            return '<div style="padding:8px 12px;border-bottom:1px solid var(--neutro2);font-size:12px;display:flex;gap:12px">' +
+              '<span style="font-weight:500;color:var(--ink);min-width:100px">' + (p[0]||'').trim() + '</span>' +
+              '<span style="color:var(--ink2)">' + (p[1]||'').trim() + '</span>' +
+            '</div>';
+          }).join('') +
+          (validas.length > 10 ? '<div style="padding:8px 12px;font-size:11px;color:var(--ink2)">+ ' + (validas.length - 10) + ' mais...</div>' : '') +
+          '</div>';
+        window._csvLines = validas;
+        document.getElementById('btn-importar-csv').disabled = false;
+      };
+      reader.readAsText(file);
+    });
+  }
+  modal.style.display = 'flex';
+}
+
+function fecharModalCSV() {
+  var modal = document.getElementById('modal-csv');
+  if (modal) modal.style.display = 'none';
+}
+
+async function processarCSV() {
+  var lines = window._csvLines;
+  if (!lines || lines.length === 0) return;
+
+  var btn = document.getElementById('btn-importar-csv');
+  var feedback = document.getElementById('csv-feedback');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  feedback.style.display = 'none';
+
+  var { data: session } = await sb.auth.getSession();
+  var token = session?.session?.access_token;
+  var empresaId = perfil?.empresa_id;
+  var nomeEmpresa = empresa?.nome_empresa || 'Sua empresa';
+
+  var sucesso = 0, erro = 0;
+  for (var i = 0; i < lines.length; i++) {
+    var partes = lines[i].split(',').map(function(p) { return p.trim(); });
+    var nome  = partes[0] || '';
+    var email = partes[1] || '';
+    var cargo = partes[2] || '';
+    var setor = partes[3] || '';
+    var nivel = partes[4] || '';
+
+    if (!email || !email.includes('@')) { erro++; continue; }
+
+    try {
+      var resp = await fetch(EDGE_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ email, nome, cargo, setor, nivel_hierarquico: nivel, empresa_id: empresaId, empresa_nome: nomeEmpresa, tipo_usuario: 'colaborador' })
+      });
+      if (resp.ok) sucesso++; else erro++;
+    } catch(e) { erro++; }
+
+    btn.textContent = 'Enviando ' + (i+1) + '/' + lines.length + '...';
+  }
+
+  feedback.style.display = 'block';
+  feedback.style.background = sucesso > 0 ? '#E1F5EE' : '#FFEBEE';
+  feedback.style.color = sucesso > 0 ? '#0F6E56' : '#C62828';
+  feedback.textContent = sucesso + ' convites enviados com sucesso' + (erro > 0 ? '. ' + erro + ' erro(s).' : '.');
+  btn.textContent = 'Importar';
+  btn.disabled = false;
 }
 
 async function salvarSetor() {
@@ -3292,6 +3460,14 @@ async function renderConvites() {
         <select class="inp" id="conv-setor" style="height:48px;cursor:pointer">
           <option value="">Sem setor definido</option>
           ${setores?.map(s => `<option value="${s.nome}">${s.nome}</option>`).join('') || ''}
+        </select>
+
+        <label class="lbl">Nível hierárquico (opcional)</label>
+        <select class="inp" id="conv-nivel" style="height:48px;cursor:pointer">
+          <option value="">Não informado</option>
+          <option value="operacional">Operacional</option>
+          <option value="tatico">Tático</option>
+          <option value="estrategico">Estratégico</option>
         </select>
 
         <button class="btn-p" id="btn-convidar" onclick="enviarConvite()" style="width:100%;margin-top:8px">
