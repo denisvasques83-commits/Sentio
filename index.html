@@ -375,24 +375,8 @@ let diagnosticoId = null;
 
 // Listener de mudança de autenticação — captura convite automaticamente
 var _authHandled = false;
-sb.auth.onAuthStateChange(async function(event, session) {
-  if (_authHandled) return;
-  if (event === 'SIGNED_IN' && session && !usuario) {
-    usuario = session.user;
-    var hasEmpresa = session.user.user_metadata?.empresa_id;
-    // Verificar se ainda não tem perfil criado (primeiro acesso)
-    var { data: perfCheck } = await sb.from('perfis').select('id').eq('id', session.user.id).maybeSingle();
-    if (!perfCheck && hasEmpresa) {
-      _authHandled = true;
-      var nomeConvite = session.user.user_metadata?.nome || session.user.email?.split('@')[0] || '';
-      var bvEl = document.getElementById('bv-nome');
-      if (bvEl) bvEl.textContent = 'Olá' + (nomeConvite ? ', ' + nomeConvite : '') + '!';
-      history.replaceState(null, '', window.location.pathname);
-      trocarTela('tela-primeiro-acesso');
-      document.getElementById('overlay').classList.add('hide');
-    }
-  }
-});
+// onAuthStateChange só trata convites via token_hash na URL
+// Login normal é tratado diretamente em fazerLogin()
 
 window.addEventListener('load', async () => {
   setTimeout(() => {
@@ -482,11 +466,14 @@ async function fazerLogin() {
     return;
   }
   usuario = data.user;
+  _authHandled = true;
   if (window._adminRoute && usuario.email === ADMIN_EMAIL) {
     await abrirAdmin();
   } else {
     await carregarPerfil();
   }
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
 }
 
 function showErro(msg) {
