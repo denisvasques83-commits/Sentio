@@ -1010,68 +1010,106 @@ async function renderConteudos() {
   }
 
   // ── HTML da seção do GESTOR (visão da empresa) ────────────────────
-  var htmlGestor = '<div style="margin-bottom:24px">' +
-    '<div class="s-titulo">Trilhas disponíveis na plataforma</div>' +
-    '<div style="font-size:12px;color:var(--ink2);margin-top:4px">Conteúdo atribuído automaticamente com base nos diagnósticos</div>' +
-  '</div>';
-
-  // Cards das 9 trilhas para o gestor
+  // ── Painel de engajamento por trilha (visão do gestor) ──────────
   var nomesTrilhas = [
-    { id:1, nome:'Gestão de Demanda', emoji:'📋', desc:'Sobrecarga moderada', modulos:5 },
-    { id:2, nome:'Prevenção de Exaustão', emoji:'🔴', desc:'Sobrecarga alta', modulos:6 },
-    { id:3, nome:'Segurança Psicológica', emoji:'🛡️', desc:'Baixa segurança', modulos:5 },
-    { id:4, nome:'Liderança sob Pressão', emoji:'💼', desc:'Conflito com liderança', modulos:5 },
-    { id:5, nome:'Clareza Operacional', emoji:'⚙️', desc:'Desorganização', modulos:5 },
-    { id:6, nome:'Comunicação Assertiva', emoji:'💬', desc:'Conflito interpessoal', modulos:5 },
-    { id:7, nome:'Regulação Emocional', emoji:'🧘', desc:'Ansiedade/reatividade', modulos:5 },
-    { id:8, nome:'Gestão de Rotina', emoji:'📅', desc:'Baixa previsibilidade', modulos:5 },
-    { id:9, nome:'Reconhecimento e Autonomia', emoji:'⭐', desc:'Falta de reconhecimento', modulos:5 }
+    { id:1, nome:'Gestão de Demanda', emoji:'📋', eixo:'Organização do trabalho', modulos:5 },
+    { id:2, nome:'Prevenção de Exaustão', emoji:'🔴', eixo:'Sobrecarga e burnout', modulos:6 },
+    { id:3, nome:'Segurança Psicológica', emoji:'🛡️', eixo:'Relações socioprofissionais', modulos:5 },
+    { id:4, nome:'Liderança sob Pressão', emoji:'💼', eixo:'Conflito com liderança', modulos:5 },
+    { id:5, nome:'Clareza Operacional', emoji:'⚙️', eixo:'Condições do trabalho', modulos:5 },
+    { id:6, nome:'Comunicação Assertiva', emoji:'💬', eixo:'Relações interpessoais', modulos:5 },
+    { id:7, nome:'Regulação Emocional', emoji:'🧘', eixo:'Elo trabalho-vida', modulos:5 },
+    { id:8, nome:'Gestão de Rotina', emoji:'📅', eixo:'Previsibilidade', modulos:5 },
+    { id:9, nome:'Reconhecimento e Autonomia', emoji:'⭐', eixo:'Reconhecimento e crescimento', modulos:5 }
   ];
 
-  // Contar quantos colaboradores estão em cada trilha (pelo progresso)
-  var { data: todosProg } = await sb.from('progresso_trilhas').select('trilha_id').eq('empresa_id', empresaId);
-  var contTrilha = {};
+  // Buscar progresso detalhado de todos os colaboradores
+  var { data: todosProg } = await sb.from('progresso_trilhas')
+    .select('trilha_id, colaborador_id, modulos_concluidos, concluida, score_antes, score_depois')
+    .eq('empresa_id', empresaId);
+
+  var { data: totalColabsData } = await sb.from('perfis')
+    .select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador');
+  var totalColabsN = totalColabsData?.length || 0;
+
+  var progPorTrilha = {};
   if (todosProg) {
     todosProg.forEach(function(p) {
-      contTrilha[p.trilha_id] = (contTrilha[p.trilha_id] || 0) + 1;
+      if (!progPorTrilha[p.trilha_id]) progPorTrilha[p.trilha_id] = [];
+      progPorTrilha[p.trilha_id].push(p);
     });
-  }
-
-  htmlGestor += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">';
-  nomesTrilhas.forEach(function(t) {
-    var qtd = contTrilha[t.id] || 0;
-    htmlGestor += '<div class="s-card" style="padding:18px 20px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-        '<span style="font-size:22px">' + t.emoji + '</span>' +
-        (qtd > 0 ? '<span class="tag-verde">' + qtd + ' em andamento</span>' : '<span style="font-size:11px;color:var(--ink2)">Nenhum ainda</span>') +
-      '</div>' +
-      '<div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:4px">' + t.nome + '</div>' +
-      '<div style="font-size:11px;color:var(--ink2);margin-bottom:10px">' + t.desc + ' · ' + t.modulos + ' módulos</div>' +
-      '<div class="barra"><div class="bf bf-baixo" style="width:' + (qtd > 0 ? Math.min(qtd * 10, 100) : 0) + '%"></div></div>' +
-    '</div>';
-  });
-  htmlGestor += '</div>';
-
-  if (conteudos && conteudos.length > 0) {
-    htmlGestor += '<div class="s-titulo" style="margin-bottom:16px">Todos os módulos</div>';
-    htmlGestor += '<div class="cont-grid">';
-    conteudos.forEach(function(c) {
-      htmlGestor += '<div class="cont-card">' +
-        '<div class="cont-capa" style="background:linear-gradient(135deg,' + (c.cor_capa || '#1B3A34') + ',' + (c.cor_capa || '#1B3A34') + '99)">' + (c.emoji || '📋') + '</div>' +
-        '<div class="cont-body">' +
-          '<div class="cont-cat">' + (c.categoria || '') + '</div>' +
-          '<div class="cont-titulo">' + c.titulo + '</div>' +
-          '<div class="cont-tempo">⏱ ' + (c.tempo_estimado || 5) + ' min · Módulo ' + (c.modulo_ordem || '') + '</div>' +
-        '</div>' +
-      '</div>';
-    });
-    htmlGestor += '</div>';
   }
 
   var elGestor = document.getElementById('sec-conteudos');
-  if (elGestor) {
-    elGestor.innerHTML = htmlGestor;
-  }
+  if (!elGestor) return;
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">' +
+    '<div><div class="s-titulo">Engajamento nas trilhas</div><div style="font-size:12px;color:var(--ink2);margin-top:4px">Progresso da equipe por programa de intervenção</div></div>' +
+    '<div style="font-size:12px;color:var(--ink2)">' + totalColabsN + ' colaboradores</div>' +
+  '</div>';
+
+  // Métricas rápidas
+  var totalAtivas = Object.keys(progPorTrilha).length;
+  var totalConcluidas = 0;
+  if (todosProg) todosProg.forEach(function(p) { if (p.concluida) totalConcluidas++; });
+  var totalIniciadas = todosProg?.length || 0;
+
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">' +
+    '<div class="m-card c-dourado"><div class="m-lbl">Trilhas ativas</div><div class="m-val">' + totalAtivas + '</div><div class="m-sub">de 9 disponíveis</div></div>' +
+    '<div class="m-card c-verde"><div class="m-lbl">Concluídas</div><div class="m-val">' + totalConcluidas + '</div><div class="m-sub">total de certificações</div></div>' +
+    '<div class="m-card c-azul"><div class="m-lbl">Em andamento</div><div class="m-val">' + (totalIniciadas - totalConcluidas) + '</div><div class="m-sub">participantes ativos</div></div>' +
+  '</div>';
+
+  // Lista de trilhas com progresso
+  html += '<div style="display:flex;flex-direction:column;gap:10px">';
+  nomesTrilhas.forEach(function(t) {
+    var progs = progPorTrilha[t.id] || [];
+    var iniciados = progs.length;
+    var concluidos = progs.filter(function(p) { return p.concluida; }).length;
+    var pctAdesao = totalColabsN > 0 ? Math.round(iniciados / totalColabsN * 100) : 0;
+    var mediaModulos = iniciados > 0 ? Math.round(progs.reduce(function(a,b){ return a + (b.modulos_concluidos||0); }, 0) / iniciados) : 0;
+    var temMelhora = progs.some(function(p) { return p.score_depois && p.score_antes && p.score_depois < p.score_antes; });
+
+    var corAdesao = pctAdesao >= 70 ? 'var(--baixo)' : pctAdesao >= 30 ? 'var(--medio)' : 'var(--neutro2)';
+
+    html += '<div style="background:var(--branco);border:1px solid var(--neutro2);border-radius:14px;padding:18px 20px">' +
+      '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">' +
+        '<div style="width:40px;height:40px;border-radius:12px;background:var(--neutro2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">' + t.emoji + '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:2px">' + t.nome + '</div>' +
+          '<div style="font-size:11px;color:var(--ink2)">' + t.eixo + ' · ' + t.modulos + ' módulos</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          (iniciados > 0
+            ? '<div style="font-size:22px;font-weight:300;color:var(--ink);font-family:Nunito,sans-serif">' + iniciados + '</div><div style="font-size:10px;color:var(--ink2)">participantes</div>'
+            : '<div style="font-size:12px;color:var(--ink2)">Nenhum ainda</div>') +
+        '</div>' +
+      '</div>' +
+      (iniciados > 0 ? (
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">' +
+          '<div style="background:var(--neutro2);border-radius:8px;padding:8px 12px;text-align:center">' +
+            '<div style="font-size:16px;font-weight:500;color:var(--ink)">' + concluidos + '</div>' +
+            '<div style="font-size:10px;color:var(--ink2)">Concluíram</div>' +
+          '</div>' +
+          '<div style="background:var(--neutro2);border-radius:8px;padding:8px 12px;text-align:center">' +
+            '<div style="font-size:16px;font-weight:500;color:var(--ink)">' + mediaModulos + '/' + t.modulos + '</div>' +
+            '<div style="font-size:10px;color:var(--ink2)">Módulos (média)</div>' +
+          '</div>' +
+          '<div style="background:var(--neutro2);border-radius:8px;padding:8px 12px;text-align:center">' +
+            '<div style="font-size:16px;font-weight:500;color:' + corAdesao + '">' + pctAdesao + '%</div>' +
+            '<div style="font-size:10px;color:var(--ink2)">Adesão</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="height:4px;background:var(--neutro2);border-radius:100px;overflow:hidden">' +
+          '<div style="height:100%;width:' + pctAdesao + '%;background:' + corAdesao + ';border-radius:100px;transition:width 1s ease"></div>' +
+        '</div>' +
+        (temMelhora ? '<div style="font-size:11px;color:var(--baixo);margin-top:8px;font-weight:500">↓ Score de risco reduziu em alguns participantes</div>' : '')
+      ) : '') +
+    '</div>';
+  });
+  html += '</div>';
+
+  elGestor.innerHTML = html;
 }
 
 // ── Abrir trilha completa ──────────────────────────────────────────
