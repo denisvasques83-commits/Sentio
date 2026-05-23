@@ -450,7 +450,40 @@ async function carregarPerfil() {
 }
 
 async function criarPerfilDemo() {
-  trocarTela('tela-' + (tipoUsuario === 'gestor' ? 'dashboard' : 'colaborador'));
+  // Verificar metadata do Auth para determinar tipo correto
+  var metaEmpresaId = usuario?.user_metadata?.empresa_id;
+  var metaTipo = usuario?.user_metadata?.tipo_usuario || 'colaborador';
+
+  if (metaEmpresaId) {
+    // Usuário veio de convite — criar perfil com dados do metadata
+    var { data: novoPerfilData } = await sb.from('perfis').insert({
+      id:           usuario.id,
+      email:        usuario.email,
+      nome:         usuario.user_metadata?.nome || usuario.email.split('@')[0],
+      cargo:        usuario.user_metadata?.cargo || null,
+      setor:        usuario.user_metadata?.setor || null,
+      empresa_id:   metaEmpresaId,
+      tipo_usuario: metaTipo === 'gestor' ? 'gestor' : 'colaborador'
+    }).select().single();
+
+    if (novoPerfilData) {
+      perfil = novoPerfilData;
+      if (novoPerfilData.empresa_id) {
+        const { data: emp } = await sb.from('empresas').select('*').eq('id', novoPerfilData.empresa_id).maybeSingle();
+        empresa = emp;
+      }
+      if (metaTipo === 'gestor') {
+        await abrirDashboardGestor();
+      } else {
+        await abrirHomeColaborador();
+      }
+      return;
+    }
+  }
+
+  // Sem metadata — redirecionar para login
+  await sb.auth.signOut();
+  trocarTela('tela-login');
 }
 
 async function sair() {
@@ -509,6 +542,10 @@ async function abrirDashboardGestor() {
 
 async function renderDashboard() {
   const empresaId = perfil?.empresa_id;
+  if (!empresaId) {
+    document.getElementById('sec-dashboard').innerHTML = '<div style="text-align:center;padding:60px 20px"><div style="font-size:13px;color:var(--ink2)">Empresa não encontrada. Tente sair e entrar novamente.</div></div>';
+    return;
+  }
   let totalColab = 0, totalDiag = 0, mediaScore = 0, baixo = 0, medio = 0, alto = 0;
   let diags = [];
   if (empresaId) {
