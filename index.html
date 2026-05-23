@@ -203,6 +203,28 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
   <div class="ov-dot"></div>
 </div>
 
+<div id="tela-primeiro-acesso" class="tela">
+  <div class="login-card">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px">
+      <div class="login-logo" style="margin-bottom:0">SENTIO</div>
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="10" stroke="#B0894A" stroke-width="1.5"/><circle cx="11" cy="11" r="3" fill="#B0894A"/></svg>
+    </div>
+    <div class="login-tag">Bem-vindo à plataforma</div>
+    <div class="login-div"></div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:22px;margin-bottom:8px">👋</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink)" id="bv-nome">Olá!</div>
+      <div style="font-size:13px;color:var(--ink2);margin-top:4px">Crie sua senha para acessar a plataforma</div>
+    </div>
+    <div class="erro-msg" id="erro-primeiro-acesso" style="display:none"></div>
+    <label class="lbl">Nova senha</label>
+    <input type="password" class="inp" id="nova-senha" placeholder="Mínimo 6 caracteres">
+    <label class="lbl">Confirmar senha</label>
+    <input type="password" class="inp" id="confirmar-senha" placeholder="Repita a senha">
+    <button class="login-btn" id="btn-criar-senha" onclick="criarSenha()">Criar senha e entrar →</button>
+  </div>
+</div>
+
 <div id="tela-login" class="tela ativa">
   <div class="login-card">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px">
@@ -359,11 +381,40 @@ window.addEventListener('load', async () => {
   // Verificar se está acessando /admin
   var isAdminRoute = window.location.hash === '#admin' || window.location.search.includes('admin=1');
 
+  // Detectar token de convite/recuperação no hash da URL
+  var hashParams = {};
+  if (window.location.hash && window.location.hash.includes('=')) {
+    window.location.hash.substring(1).split('&').forEach(function(p) {
+      var parts = p.split('=');
+      hashParams[parts[0]] = decodeURIComponent(parts[1] || '');
+    });
+  }
+  var isConvite = hashParams['type'] === 'invite' || hashParams['type'] === 'recovery' ||
+                  (hashParams['access_token'] && !isAdminRoute);
+
+  if (isConvite && hashParams['access_token']) {
+    // Autenticar com o token do convite
+    var { data: sessionData, error: sessErr } = await sb.auth.setSession({
+      access_token: hashParams['access_token'],
+      refresh_token: hashParams['refresh_token'] || ''
+    });
+    if (sessionData?.session) {
+      usuario = sessionData.session.user;
+      var nomeConvite = usuario.user_metadata?.nome || usuario.email?.split('@')[0] || '';
+      var el = document.getElementById('bv-nome');
+      if (el) el.textContent = 'Olá' + (nomeConvite ? ', ' + nomeConvite : '') + '!';
+      // Limpar hash da URL
+      history.replaceState(null, '', window.location.pathname);
+      trocarTela('tela-primeiro-acesso');
+      document.getElementById('overlay').classList.add('hide');
+      return;
+    }
+  }
+
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     usuario = session.user;
     if (isAdminRoute) {
-      // Validar que é o admin antes de mostrar
       if (usuario.email === ADMIN_EMAIL) {
         await abrirAdmin();
       } else {
@@ -373,7 +424,6 @@ window.addEventListener('load', async () => {
       await carregarPerfil();
     }
   } else if (isAdminRoute) {
-    // Mostrar login com indicador de admin
     document.getElementById('login-tag').textContent = 'Acesso Administrativo';
     window._adminRoute = true;
   }
@@ -386,6 +436,37 @@ function setTipo(btn, tipo) {
   tipoUsuario = tipo;
   document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
+}
+
+async function criarSenha() {
+  var senha    = document.getElementById('nova-senha').value;
+  var confirma = document.getElementById('confirmar-senha').value;
+  var btn      = document.getElementById('btn-criar-senha');
+  var erro     = document.getElementById('erro-primeiro-acesso');
+
+  if (!senha || senha.length < 6) {
+    erro.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+    erro.style.display = 'block'; return;
+  }
+  if (senha !== confirma) {
+    erro.textContent = 'As senhas não conferem.';
+    erro.style.display = 'block'; return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Criando acesso...';
+  erro.style.display = 'none';
+
+  var { error } = await sb.auth.updateUser({ password: senha });
+  if (error) {
+    erro.textContent = 'Erro ao criar senha: ' + error.message;
+    erro.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Criar senha e entrar →';
+    return;
+  }
+
+  await carregarPerfil();
 }
 
 async function fazerLogin() {
