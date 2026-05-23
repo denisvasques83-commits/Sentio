@@ -16,7 +16,7 @@
 --neutro: #E8E4DC;
 --neutro2: #CEC7B8;
 --ink: #1A1A18;
---ink2: #3A3A38;
+--ink2: #2A2A28;
 --branco: #FFFFFF;
 --baixo: #2A7A4B;
 --medio: #D4860A;
@@ -51,7 +51,7 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
 .s-div{height:1px;background:rgba(255,255,255,.08);margin:0 28px 24px;}
 .s-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:0 28px 6px;margin-top:8px;display:block;}
 .s-nav{flex:1;}
-.nav-item{display:flex;align-items:center;padding:10px 28px;font-size:13px;font-weight:400;color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;border-left:2px solid transparent;letter-spacing:.1px;}
+.nav-item{display:flex;align-items:center;padding:10px 28px;font-size:13px;font-weight:500;color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;border-left:2px solid transparent;letter-spacing:.1px;}
 .nav-item:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.03);}
 .nav-item.on{color:var(--neutro);background:rgba(255,255,255,.06);border-left-color:var(--dourado);font-weight:500;}
 .nav-ic{display:none;}
@@ -73,7 +73,7 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
 .m-card.c-verde::before{background:var(--baixo);}
 .m-card.c-amarelo::before{background:var(--medio);}
 .m-card.c-azul::before{background:var(--verde2);}
-.m-lbl{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2);margin-bottom:12px;}
+.m-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2);margin-bottom:12px;}
 .m-val{font-family:'Nunito',sans-serif;font-size:40px;font-weight:300;color:var(--ink);line-height:1;margin-bottom:6px;}
 .m-sub{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px;}
 .trend{font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;}
@@ -4633,12 +4633,15 @@ async function enviarMsgCoach() {
     '6. Estratégias práticas para o trabalho';
 
   try {
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
+    var { data: sessionData } = await sb.auth.getSession();
+    var token = sessionData?.session?.access_token;
+    var response = await fetch('https://jeuziyxwhggegfwnsbwj.supabase.co/functions/v1/nina-coach', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
         system: systemPrompt,
         messages: _coachHistorico
       })
