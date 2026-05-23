@@ -519,21 +519,28 @@ function showErro(msg) {
 }
 
 async function carregarPerfil() {
-  // Buscar perfil sem join para evitar problemas de RLS
+  if (!usuario?.id) { trocarTela('tela-login'); return; }
+
   const { data, error } = await sb.from('perfis')
     .select('*')
     .eq('id', usuario.id)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
     console.error('Erro ao carregar perfil:', error);
+    // Tentar criar perfil a partir do metadata
+    await criarPerfilDemo();
+    return;
+  }
+
+  if (!data) {
+    // Perfil não existe — criar a partir do metadata do Auth
     await criarPerfilDemo();
     return;
   }
 
   perfil = data;
 
-  // Buscar empresa separadamente
   if (data.empresa_id) {
     const { data: emp } = await sb.from('empresas')
       .select('*')
@@ -550,40 +557,42 @@ async function carregarPerfil() {
 }
 
 async function criarPerfilDemo() {
-  // Verificar metadata do Auth para determinar tipo correto
+  if (!usuario?.id) { trocarTela('tela-login'); return; }
+
   var metaEmpresaId = usuario?.user_metadata?.empresa_id;
-  var metaTipo = usuario?.user_metadata?.tipo_usuario || 'colaborador';
+  var metaTipo = (usuario?.user_metadata?.tipo_usuario === 'gestor') ? 'gestor' : 'colaborador';
+  var metaNome = usuario?.user_metadata?.nome || usuario?.email?.split('@')[0] || 'Usuário';
 
-  if (metaEmpresaId) {
-    // Usuário veio de convite — criar perfil com dados do metadata
-    var { data: novoPerfilData } = await sb.from('perfis').insert({
-      id:           usuario.id,
-      email:        usuario.email,
-      nome:         usuario.user_metadata?.nome || usuario.email.split('@')[0],
-      cargo:        usuario.user_metadata?.cargo || null,
-      setor:        usuario.user_metadata?.setor || null,
-      empresa_id:   metaEmpresaId,
-      tipo_usuario: metaTipo === 'gestor' ? 'gestor' : 'colaborador'
-    }).select().single();
-
-    if (novoPerfilData) {
-      perfil = novoPerfilData;
-      if (novoPerfilData.empresa_id) {
-        const { data: emp } = await sb.from('empresas').select('*').eq('id', novoPerfilData.empresa_id).maybeSingle();
-        empresa = emp;
-      }
-      if (metaTipo === 'gestor') {
-        await abrirDashboardGestor();
-      } else {
-        await abrirHomeColaborador();
-      }
-      return;
-    }
+  if (!metaEmpresaId) {
+    await sb.auth.signOut();
+    trocarTela('tela-login');
+    return;
   }
 
-  // Sem metadata — redirecionar para login
-  await sb.auth.signOut();
-  trocarTela('tela-login');
+  // Tentar inserir — se já existir, buscar
+  var { data: novo, error: insErr } = await sb.from('perfis').upsert({
+    id:           usuario.id,
+    nome:         metaNome,
+    cargo:        usuario.user_metadata?.cargo || null,
+    setor:        usuario.user_metadata?.setor || null,
+    empresa_id:   metaEmpresaId,
+    tipo_usuario: metaTipo
+  }, { onConflict: 'id' }).select().single();
+
+  if (novo) {
+    perfil = novo;
+    const { data: emp } = await sb.from('empresas').select('*').eq('id', metaEmpresaId).maybeSingle();
+    empresa = emp;
+    if (metaTipo === 'gestor') {
+      await abrirDashboardGestor();
+    } else {
+      await abrirHomeColaborador();
+    }
+  } else {
+    console.error('Erro ao criar perfil:', insErr);
+    await sb.auth.signOut();
+    trocarTela('tela-login');
+  }
 }
 
 async function sair() {
