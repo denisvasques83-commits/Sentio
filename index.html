@@ -245,7 +245,6 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
         </div>
         <span class="s-lbl" style="margin-top:16px">Conta</span>
         <div class="nav-item" onclick="exibirDireitosLGPD()">Meus dados</div>
-        <div class="nav-item" id="nav-admin-link" style="display:none" onclick="abrirAdmin()">Admin</div>
         <div class="nav-item" style="margin-top:8px" onclick="sair()">Sair</div>
       </nav>
       <div class="s-footer">
@@ -356,10 +355,27 @@ window.addEventListener('load', async () => {
   setTimeout(() => {
     document.getElementById('overlay').classList.add('hide');
   }, 1800);
+
+  // Verificar se está acessando /admin
+  var isAdminRoute = window.location.hash === '#admin' || window.location.search.includes('admin=1');
+
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     usuario = session.user;
-    await carregarPerfil();
+    if (isAdminRoute) {
+      // Validar que é o admin antes de mostrar
+      if (usuario.email === ADMIN_EMAIL) {
+        await abrirAdmin();
+      } else {
+        await carregarPerfil();
+      }
+    } else {
+      await carregarPerfil();
+    }
+  } else if (isAdminRoute) {
+    // Mostrar login com indicador de admin
+    document.getElementById('login-tag').textContent = 'Acesso Administrativo';
+    window._adminRoute = true;
   }
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const el = document.getElementById('data-hoje');
@@ -389,7 +405,11 @@ async function fazerLogin() {
     return;
   }
   usuario = data.user;
-  await carregarPerfil();
+  if (window._adminRoute && usuario.email === ADMIN_EMAIL) {
+    await abrirAdmin();
+  } else {
+    await carregarPerfil();
+  }
 }
 
 function showErro(msg) {
@@ -479,10 +499,7 @@ async function abrirDashboardGestor() {
   document.getElementById('av-gestor').textContent = (perfil?.nome || 'G')[0].toUpperCase();
   document.getElementById('cargo-gestor').textContent = perfil?.cargo || 'Gestor de RH';
   document.getElementById('subtitulo-gestor').textContent = (empresa?.nome_empresa || 'Sua empresa') + ' · Últimos 30 dias';
-  if (isAdmin()) {
-    var navAdmin = document.getElementById('nav-admin-link');
-    if (navAdmin) navAdmin.style.display = 'flex';
-  }
+
   await renderDashboard();
   await renderSessoes('gestor');
   await renderConteudos();
@@ -599,16 +616,21 @@ async function renderDashboard() {
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
       <div class="s-card" id="trilhas-preview">
         <div class="s-titulo" style="margin-bottom:3px">Trilhas em andamento</div>
-        <div class="s-sub">Progresso por programa de intervenção</div>
+        <div class="s-sub">Progresso por programa</div>
         <div class="loading">Carregando...</div>
       </div>
       <div class="s-card">
         <div class="s-titulo" style="margin-bottom:3px">Burnout por setor</div>
         <div class="s-sub">Índice Maslach por área</div>
         <div id="heatmap-gestor">Carregando...</div>
+      </div>
+      <div class="s-card" id="donut-risco">
+        <div class="s-titulo" style="margin-bottom:3px">Distribuição de risco</div>
+        <div class="s-sub">Colaboradores por nível</div>
+        <div class="loading">Carregando...</div>
       </div>
     </div>
 
@@ -620,6 +642,9 @@ async function renderDashboard() {
   `;
   // Renderizar heatmap
   if (empresaId) renderHeatmapBurnout(empresaId, 'heatmap-gestor');
+
+  // Renderizar donut de distribuição de risco
+  renderDonutRisco(baixo, medio, alto, totalDiag);
 
   // Renderizar trilhas no dashboard
   if (empresaId && perfil?.id) {
@@ -3673,6 +3698,70 @@ async function salvarModulo() {
 async function toggleModuloStatus(id, ativo) {
   await sb.from('conteudos').update({ ativo: !ativo }).eq('id', id);
   renderAdminConteudo();
+}
+
+function renderDonutRisco(baixo, medio, alto, total) {
+  var el = document.getElementById('donut-risco');
+  if (!el) return;
+
+  if (total === 0) {
+    el.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Distribuição de risco</div>' +
+      '<div class="s-sub">Colaboradores por nível</div>' +
+      '<p style="font-size:13px;color:var(--ink2);text-align:center;padding:24px 0">Nenhum diagnóstico realizado.</p>';
+    return;
+  }
+
+  // Calcular ângulos para o donut SVG
+  var cx = 60, cy = 60, r = 46, stroke = 14;
+  var circ = 2 * Math.PI * r;
+  var pBaixo = baixo / total;
+  var pMedio = medio / total;
+  var pAlto  = alto  / total;
+
+  function arco(pct, offset, cor) {
+    if (pct <= 0) return '';
+    var dash = pct * circ;
+    var gap  = circ - dash;
+    return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none"' +
+      ' stroke="' + cor + '" stroke-width="' + stroke + '"' +
+      ' stroke-dasharray="' + dash.toFixed(1) + ' ' + gap.toFixed(1) + '"' +
+      ' stroke-dashoffset="' + offset.toFixed(1) + '"' +
+      ' stroke-linecap="round"/>';
+  }
+
+  var offBaixo = circ * 0.25; // começa no topo (90° = circ/4)
+  var offMedio = offBaixo - pBaixo * circ;
+  var offAlto  = offMedio - pMedio * circ;
+
+  var svg = '<svg width="120" height="120" viewBox="0 0 120 120" style="display:block;margin:12px auto">' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--neutro2)" stroke-width="' + stroke + '"/>' +
+    arco(pBaixo, offBaixo, '#2A7A4B') +
+    arco(pMedio, offMedio, '#D4860A') +
+    arco(pAlto,  offAlto,  '#C0392B') +
+    '<text x="' + cx + '" y="' + (cy - 6) + '" text-anchor="middle" font-family="Nunito,sans-serif" font-size="20" font-weight="300" fill="var(--ink)">' + total + '</text>' +
+    '<text x="' + cx + '" y="' + (cy + 10) + '" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" fill="var(--ink2)">diagnósticos</text>' +
+  '</svg>';
+
+  var legenda = '<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">' +
+    [
+      { label: 'Baixo risco', val: baixo, cor: '#2A7A4B' },
+      { label: 'Risco médio', val: medio, cor: '#D4860A' },
+      { label: 'Risco alto',  val: alto,  cor: '#C0392B' }
+    ].map(function(item) {
+      var pct = Math.round(item.val / total * 100);
+      return '<div style="display:flex;align-items:center;justify-content:space-between">' +
+        '<div style="display:flex;align-items:center;gap:7px">' +
+          '<div style="width:8px;height:8px;border-radius:50%;background:' + item.cor + ';flex-shrink:0"></div>' +
+          '<span style="font-size:12px;color:var(--ink2)">' + item.label + '</span>' +
+        '</div>' +
+        '<span style="font-size:12px;font-weight:500;color:var(--ink)">' + item.val + ' <span style="font-weight:400;color:var(--ink2)">(' + pct + '%)</span></span>' +
+      '</div>';
+    }).join('') +
+  '</div>';
+
+  el.innerHTML = '<div class="s-titulo" style="margin-bottom:3px">Distribuição de risco</div>' +
+    '<div class="s-sub">Colaboradores por nível</div>' +
+    svg + legenda;
 }
 
 function extrairYoutubeId(url) {
