@@ -266,6 +266,7 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
           <span id="badge-alertas" style="margin-left:auto;background:var(--alto);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;display:none">0</span>
         </div>
         <span class="s-lbl" style="margin-top:16px">Conta</span>
+        <div class="nav-item" onclick="navegarGestor('onboarding',this)">Primeiros passos</div>
         <div class="nav-item" onclick="exibirDireitosLGPD()">Meus dados</div>
         <div class="nav-item" style="margin-top:8px" onclick="sair()">Sair</div>
       </nav>
@@ -293,6 +294,7 @@ body{font-family:'Nunito',sans-serif;font-weight:300;background:var(--neutro);co
       <div id="sec-sessoes" class="m-content" style="display:none"></div>
       <div id="sec-conteudos" class="m-content" style="display:none"></div>
       <div id="sec-alertas" class="m-content" style="display:none"></div>
+      <div id="sec-onboarding" class="m-content" style="display:none"></div>
       <div id="sec-relatorio" class="m-content" style="display:none"></div>
       <div id="sec-configuracoes" class="m-content" style="display:none"></div>
     </main>
@@ -615,12 +617,14 @@ function trocarTela(id) {
 function navegarGestor(secao, el) {
   document.querySelectorAll('#sidebar-gestor .nav-item').forEach(n => n.classList.remove('on'));
   if (el) el.classList.add('on');
-  ['dashboard','sessoes','conteudos','alertas','relatorio','configuracoes'].forEach(s => {
-    document.getElementById('sec-'+s).style.display = s === secao ? 'block' : 'none';
+  ['dashboard','sessoes','conteudos','alertas','relatorio','configuracoes','onboarding'].forEach(s => {
+    var el = document.getElementById('sec-'+s);
+    if (el) el.style.display = s === secao ? 'block' : 'none';
   });
-  const titulos = { dashboard:'Dashboard', sessoes:'Sessões', conteudos:'Conteúdos', alertas:'Alertas', relatorio:'Relatório IA', configuracoes:'Configurações' };
+  const titulos = { dashboard:'Dashboard', sessoes:'Sessões', conteudos:'Conteúdos', alertas:'Alertas', relatorio:'Relatório IA', configuracoes:'Configurações', onboarding:'Primeiros passos' };
   document.getElementById('titulo-gestor').textContent = titulos[secao] || secao;
   if (secao === 'configuracoes') renderConfiguracoes();
+  if (secao === 'onboarding') renderOnboarding();
 }
 
 function navegarColab(secao, el) {
@@ -659,6 +663,101 @@ async function abrirDashboardGestor() {
   await renderConteudos();
   await renderAlertas();
   await renderRelatorio();
+}
+
+async function renderOnboarding() {
+  var sec = document.getElementById('sec-onboarding');
+  if (!sec) return;
+
+  var empresaId = perfil?.empresa_id;
+  var [
+    { data: colabs },
+    { data: setores },
+    { data: diags },
+    { data: rtData }
+  ] = await Promise.all([
+    sb.from('perfis').select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador'),
+    sb.from('setores_empresa').select('id').eq('empresa_id', empresaId).eq('ativo', true),
+    sb.from('diagnosticos').select('id').eq('empresa_id', empresaId).eq('status', 'completo'),
+    sb.from('empresas').select('rt_nome,rt_crp').eq('id', empresaId).maybeSingle()
+  ]);
+
+  var totalColabs   = colabs?.length  || 0;
+  var totalSetores  = setores?.length || 0;
+  var totalDiags    = diags?.length   || 0;
+  var temRT         = !!(rtData?.rt_nome);
+
+  var passos = [
+    {
+      num: 1, icone: '🏢', titulo: 'Criar setores',
+      desc: 'Organize sua empresa por áreas. O heatmap de burnout será segmentado por setor.',
+      feito: totalSetores > 0,
+      detalhe: totalSetores > 0 ? totalSetores + ' setor(es) criado(s)' : 'Nenhum setor ainda',
+      acao: "navegarGestor('configuracoes',null)", cta: 'Criar setores →'
+    },
+    {
+      num: 2, icone: '✉', titulo: 'Convidar colaboradores',
+      desc: 'Envie convites para sua equipe por e-mail, um a um ou em lote via CSV.',
+      feito: totalColabs > 0,
+      detalhe: totalColabs > 0 ? totalColabs + ' colaborador(es) cadastrado(s)' : 'Nenhum convidado ainda',
+      acao: "navegarGestor('configuracoes',null)", cta: 'Convidar →'
+    },
+    {
+      num: 3, icone: '📋', titulo: 'Aguardar os diagnósticos',
+      desc: 'Cada colaborador receberá o diagnóstico no primeiro acesso. Você acompanha a adesão no Dashboard.',
+      feito: totalDiags > 0,
+      detalhe: totalDiags > 0 ? totalDiags + ' diagnóstico(s) realizado(s)' : 'Aguardando respostas',
+      acao: "navegarGestor('dashboard',null)", cta: 'Ver dashboard →'
+    },
+    {
+      num: 4, icone: '👤', titulo: 'Adicionar Responsável Técnico',
+      desc: 'Para validade legal do relatório NR-01, informe o psicólogo ou médico do trabalho responsável.',
+      feito: temRT,
+      detalhe: temRT ? (rtData.rt_nome + (rtData.rt_crp ? ' · ' + rtData.rt_crp : '')) : 'RT não informado',
+      acao: "navegarGestor('configuracoes',null)", cta: 'Adicionar RT →'
+    },
+    {
+      num: 5, icone: '📄', titulo: 'Gerar Relatório NR-01',
+      desc: 'Com os dados coletados, exporte o relatório completo com inventário de riscos e plano de ação.',
+      feito: false,
+      detalhe: totalDiags > 0 ? 'Disponível agora' : 'Aguardando diagnósticos',
+      acao: "navegarGestor('relatorio',null)", cta: 'Gerar relatório →'
+    }
+  ];
+
+  var concluidos = passos.filter(function(p) { return p.feito; }).length;
+  var pct = Math.round(concluidos / passos.length * 100);
+
+  sec.innerHTML = '<div style="max-width:680px">' +
+    '<div style="margin-bottom:28px">' +
+      '<div class="s-titulo" style="margin-bottom:4px">Primeiros passos</div>' +
+      '<div style="font-size:13px;color:var(--ink2);margin-bottom:14px">Configure sua conta para aproveitar tudo que o Sentio oferece</div>' +
+      '<div style="display:flex;align-items:center;gap:12px">' +
+        '<div style="flex:1;height:6px;background:var(--neutro2);border-radius:100px;overflow:hidden">' +
+          '<div style="height:100%;width:' + pct + '%;background:var(--verde);border-radius:100px;transition:width 1s ease"></div>' +
+        '</div>' +
+        '<span style="font-size:12px;font-weight:600;color:var(--ink)">' + concluidos + '/' + passos.length + ' concluídos</span>' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+    passos.map(function(p) {
+      return '<div style="background:white;border:1px solid ' + (p.feito ? '#2A7A4B44' : 'var(--neutro2)') + ';border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:16px">' +
+        '<div style="width:44px;height:44px;border-radius:50%;background:' + (p.feito ? 'var(--baixo)' : 'var(--neutro2)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:' + (p.feito ? '0' : '20px') + '">' +
+          (p.feito
+            ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l5 5 7-7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+            : p.icone) +
+        '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:3px">' + p.titulo + '</div>' +
+          '<div style="font-size:12px;color:var(--ink2);line-height:1.5;margin-bottom:4px">' + p.desc + '</div>' +
+          '<div style="font-size:11px;font-weight:500;color:' + (p.feito ? 'var(--baixo)' : 'var(--ink2)') + '">' + p.detalhe + '</div>' +
+        '</div>' +
+        (!p.feito ? '<button onclick="' + p.acao + '" style="background:var(--verde);color:var(--neutro);border:none;border-radius:8px;padding:8px 14px;font-family:Nunito,sans-serif;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">' + p.cta + '</button>' : '') +
+      '</div>';
+    }).join('') +
+    '</div>' +
+  '</div>';
 }
 
 function mostrarOnboardingGestor(totalSetores, totalColabs) {
@@ -2310,6 +2409,35 @@ async function abrirHomeColaborador() {
 }
 
 async function iniciarDiagnostico() {
+  // Verificar se já fez diagnóstico nos últimos 90 dias
+  if (perfil?.id) {
+    var { data: ultimo } = await sb.from('diagnosticos')
+      .select('created_at, liberado_gestor')
+      .eq('colaborador_id', perfil.id)
+      .eq('status', 'completo')
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle();
+
+    if (ultimo && !ultimo.liberado_gestor) {
+      var dias = Math.floor((new Date() - new Date(ultimo.created_at)) / (1000 * 60 * 60 * 24));
+      if (dias < 90) {
+        var restam = 90 - dias;
+        // Mostrar mensagem de bloqueio na home
+        var secHome = document.getElementById('sec-colab-home');
+        if (secHome) {
+          var bloqueioDiv = document.createElement('div');
+          bloqueioDiv.style.cssText = 'background:white;border:1px solid var(--neutro2);border-radius:12px;padding:20px;margin-bottom:16px;text-align:center';
+          bloqueioDiv.innerHTML = '<div style="font-size:16px;margin-bottom:8px">📋</div>' +
+            '<div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Diagnóstico em dia</div>' +
+            '<div style="font-size:13px;color:var(--ink2)">Você pode refazer o diagnóstico em <strong>' + restam + ' dias</strong>.<br>O próximo ciclo abre em ' + new Date(new Date(ultimo.created_at).getTime() + 90*24*60*60*1000).toLocaleDateString('pt-BR') + '.</div>';
+          secHome.insertBefore(bloqueioDiv, secHome.firstChild);
+        }
+        await abrirHomeColaborador();
+        return;
+      }
+    }
+  }
+
   document.getElementById('sec-colab-diag').style.display = 'block';
   document.getElementById('diag-result-area').style.display = 'none';
   document.getElementById('diag-form-area').style.display = 'block';
@@ -2537,6 +2665,7 @@ async function renderSetores() {
       <div style="display:flex;gap:8px">
         <button class="btn-sec" onclick="renderConvites()">✉ Convidar colaboradores</button>
         <button class="btn-sec" onclick="abrirModalCSV()">📋 Importar CSV</button>
+        <button class="btn-sec" onclick="liberarNovoCiclo()">🔄 Novo ciclo</button>
         <button class="btn-pri" onclick="abrirModalSetor()">+ Novo setor</button>
       </div>
     </div>
@@ -2681,6 +2810,32 @@ function abrirModalCSV() {
 function fecharModalCSV() {
   var modal = document.getElementById('modal-csv');
   if (modal) modal.style.display = 'none';
+}
+
+async function liberarNovoCiclo() {
+  if (!confirm('Liberar novo ciclo de diagnóstico para todos os colaboradores da empresa?\n\nIsso permite que todos refaçam o diagnóstico antes dos 90 dias.')) return;
+
+  var empresaId = perfil?.empresa_id;
+  if (!empresaId) return;
+
+  // Marcar todos os diagnósticos recentes como liberado_gestor = true
+  var { data: colabs } = await sb.from('perfis')
+    .select('id').eq('empresa_id', empresaId).eq('tipo_usuario', 'colaborador');
+
+  if (!colabs || colabs.length === 0) { alert('Nenhum colaborador cadastrado.'); return; }
+
+  var ids = colabs.map(function(c) { return c.id; });
+  var { error } = await sb.from('diagnosticos')
+    .update({ liberado_gestor: true })
+    .eq('empresa_id', empresaId)
+    .eq('status', 'completo')
+    .in('colaborador_id', ids);
+
+  if (error) {
+    alert('Erro ao liberar ciclo: ' + error.message);
+  } else {
+    alert('✓ Novo ciclo liberado! Todos os colaboradores podem refazer o diagnóstico.');
+  }
 }
 
 async function processarCSV() {
