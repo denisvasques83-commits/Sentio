@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sentio — Inteligência Psicossocial Corporativa</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
@@ -13,8 +13,8 @@
 --salvia: #A6B49A;
 --areia: #E6D7B8;
 --dourado: #B0894A;
---neutro: #EFECE6;
---neutro2: #D8D1C4;
+--neutro: #E8E4DC;
+--neutro2: #CEC7B8;
 --ink: #1A1A18;
 --ink2: #525252;
 --branco: #FFFFFF;
@@ -24,7 +24,7 @@
 --sidebar: 240px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Outfit',sans-serif;font-weight:300;background:var(--neutro);color:var(--ink);min-height:100vh;}
+body{font-family:'Plus Jakarta Sans',sans-serif;font-weight:300;background:var(--neutro);color:var(--ink);min-height:100vh;}
 .tela{display:none;min-height:100vh;}
 .tela.ativa{display:flex;}
 #tela-login{background:var(--verde);align-items:center;justify-content:center;position:relative;overflow:hidden;}
@@ -34,12 +34,12 @@ body{font-family:'Outfit',sans-serif;font-weight:300;background:var(--neutro);co
 .login-tag{font-size:9px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:var(--dourado);text-align:center;margin-bottom:28px;}
 .login-div{width:40px;height:1.5px;background:var(--dourado);margin:0 auto 32px;}
 .tipo-row{display:flex;gap:8px;margin-bottom:24px;}
-.tipo-btn{flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--neutro2);background:var(--branco);font-family:'Outfit',sans-serif;font-size:12px;color:var(--ink2);cursor:pointer;transition:all .2s;}
+.tipo-btn{flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--neutro2);background:var(--branco);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--ink2);cursor:pointer;transition:all .2s;}
 .tipo-btn.on{border-color:var(--verde);background:var(--verde);color:white;font-weight:500;}
 .lbl{font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:8px;display:block;}
-.inp{width:100%;height:48px;border:1.5px solid var(--neutro2);border-radius:8px;padding:0 16px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:300;color:var(--ink);background:var(--branco);outline:none;transition:border-color .2s;margin-bottom:18px;}
+.inp{width:100%;height:48px;border:1.5px solid var(--neutro2);border-radius:8px;padding:0 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:300;color:var(--ink);background:var(--branco);outline:none;transition:border-color .2s;margin-bottom:18px;}
 .inp:focus{border-color:var(--verde);}
-.login-btn{width:100%;height:48px;background:var(--verde);color:var(--neutro);border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;margin-bottom:16px;}
+.login-btn{width:100%;height:48px;background:var(--verde);color:var(--neutro);border:none;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;margin-bottom:16px;}
 .login-btn:hover{background:var(--verde2);transform:translateY(-1px);}
 .login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
 .link-btn{text-align:center;font-size:12px;color:var(--dourado);cursor:pointer;display:block;}
@@ -150,8 +150,8 @@ body{font-family:'Outfit',sans-serif;font-weight:300;background:var(--neutro);co
 .e-btn:hover{border-color:var(--verde);color:var(--verde);}
 .e-btn.sel{border-color:var(--verde);background:var(--verde);color:white;}
 .d-nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px;}
-.btn-v{padding:12px 24px;border:1.5px solid var(--neutro2);border-radius:8px;background:transparent;font-family:'Outfit',sans-serif;font-size:13px;color:var(--ink2);cursor:pointer;transition:all .2s;}
-.btn-p{padding:12px 32px;border:none;border-radius:8px;background:var(--verde);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:white;cursor:pointer;transition:all .2s;}
+.btn-v{padding:12px 24px;border:1.5px solid var(--neutro2);border-radius:8px;background:transparent;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--ink2);cursor:pointer;transition:all .2s;}
+.btn-p{padding:12px 32px;border:none;border-radius:8px;background:var(--verde);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;color:white;cursor:pointer;transition:all .2s;}
 .btn-p:hover{background:var(--verde2);}
 .btn-p:disabled{opacity:.4;cursor:not-allowed;}
 .d-resultado{text-align:center;padding:48px 32px;background:var(--branco);border:1.5px solid var(--neutro2);border-radius:20px;}
@@ -172,9 +172,9 @@ body{font-family:'Outfit',sans-serif;font-weight:300;background:var(--neutro);co
 .sess-status{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;}
 .st-ag{background:rgba(53,84,93,.1);color:var(--verde2);}
 .st-re{background:rgba(42,122,75,.1);color:var(--baixo);}
-.btn-pri{padding:12px 28px;background:var(--verde);color:white;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-pri{padding:12px 28px;background:var(--verde);color:white;border:none;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
 .btn-pri:hover{background:var(--verde2);transform:translateY(-1px);}
-.btn-sec{padding:12px 24px;background:transparent;color:var(--ink2);border:1.5px solid var(--neutro2);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+.btn-sec{padding:12px 24px;background:transparent;color:var(--ink2);border:1.5px solid var(--neutro2);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
 .tag-verde{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:600;background:rgba(42,122,75,.1);color:var(--baixo);}
 .tag-dourado{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:600;background:rgba(176,137,74,.12);color:var(--dourado);}
 .notif-btn{position:relative;width:36px;height:36px;border-radius:8px;border:1.5px solid var(--neutro2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;background:var(--branco);}
@@ -2276,7 +2276,7 @@ function exportarRelatorioPDF(dados) {
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
       * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family:'Outfit',sans-serif; font-size:13px; color:#1A1A18; background:#fff; }
+      body { font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; color:#1A1A18; background:#fff; }
       .page { max-width:780px; margin:0 auto; padding:40px; }
       .header { background:#1B3A34; padding:32px 40px; margin-bottom:32px; }
       .header-logo { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:600; color:#EFECE6; letter-spacing:-0.5px; }
