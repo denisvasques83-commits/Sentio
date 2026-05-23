@@ -373,6 +373,27 @@ let perguntaAtual = 0;
 let respostas = {};
 let diagnosticoId = null;
 
+// Listener de mudança de autenticação — captura convite automaticamente
+var _authHandled = false;
+sb.auth.onAuthStateChange(async function(event, session) {
+  if (_authHandled) return;
+  if (event === 'SIGNED_IN' && session && !usuario) {
+    usuario = session.user;
+    var hasEmpresa = session.user.user_metadata?.empresa_id;
+    // Verificar se ainda não tem perfil criado (primeiro acesso)
+    var { data: perfCheck } = await sb.from('perfis').select('id').eq('id', session.user.id).maybeSingle();
+    if (!perfCheck && hasEmpresa) {
+      _authHandled = true;
+      var nomeConvite = session.user.user_metadata?.nome || session.user.email?.split('@')[0] || '';
+      var bvEl = document.getElementById('bv-nome');
+      if (bvEl) bvEl.textContent = 'Olá' + (nomeConvite ? ', ' + nomeConvite : '') + '!';
+      history.replaceState(null, '', window.location.pathname);
+      trocarTela('tela-primeiro-acesso');
+      document.getElementById('overlay').classList.add('hide');
+    }
+  }
+});
+
 window.addEventListener('load', async () => {
   setTimeout(() => {
     document.getElementById('overlay').classList.add('hide');
@@ -380,36 +401,6 @@ window.addEventListener('load', async () => {
 
   // Verificar se está acessando /admin
   var isAdminRoute = window.location.hash === '#admin' || window.location.search.includes('admin=1');
-
-  // Detectar token de convite/recuperação no hash da URL
-  var hashParams = {};
-  if (window.location.hash && window.location.hash.includes('=')) {
-    window.location.hash.substring(1).split('&').forEach(function(p) {
-      var parts = p.split('=');
-      hashParams[parts[0]] = decodeURIComponent(parts[1] || '');
-    });
-  }
-  var isConvite = hashParams['type'] === 'invite' || hashParams['type'] === 'recovery' ||
-                  (hashParams['access_token'] && !isAdminRoute);
-
-  if (isConvite && hashParams['access_token']) {
-    // Autenticar com o token do convite
-    var { data: sessionData, error: sessErr } = await sb.auth.setSession({
-      access_token: hashParams['access_token'],
-      refresh_token: hashParams['refresh_token'] || ''
-    });
-    if (sessionData?.session) {
-      usuario = sessionData.session.user;
-      var nomeConvite = usuario.user_metadata?.nome || usuario.email?.split('@')[0] || '';
-      var bvEl = document.getElementById('bv-nome');
-      if (bvEl) bvEl.textContent = 'Olá' + (nomeConvite ? ', ' + nomeConvite : '') + '!';
-      // Limpar hash da URL
-      history.replaceState(null, '', window.location.pathname);
-      trocarTela('tela-primeiro-acesso');
-      document.getElementById('overlay').classList.add('hide');
-      return;
-    }
-  }
 
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
@@ -457,7 +448,7 @@ async function criarSenha() {
   btn.textContent = 'Criando acesso...';
   erro.style.display = 'none';
 
-  var { error } = await sb.auth.updateUser({ password: senha });
+  var { data: updData, error } = await sb.auth.updateUser({ password: senha });
   if (error) {
     erro.textContent = 'Erro ao criar senha: ' + error.message;
     erro.style.display = 'block';
@@ -466,7 +457,12 @@ async function criarSenha() {
     return;
   }
 
-  await carregarPerfil();
+  // Atualizar usuario com dados mais recentes
+  var { data: { session: newSession } } = await sb.auth.getSession();
+  if (newSession) usuario = newSession.user;
+
+  _authHandled = true; // Evitar loop
+  await criarPerfilDemo(); // Cria perfil com metadata e redireciona
 }
 
 async function fazerLogin() {
