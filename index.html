@@ -628,15 +628,82 @@ function navegarGestor(secao, el) {
 }
 
 function navegarColab(secao, el) {
+  if (secao === 'home') { abrirHomeColaborador(); return; }
   document.querySelectorAll('#tela-colaborador .nav-item').forEach(n => n.classList.remove('on'));
   if (el) el.classList.add('on');
   ['home','diag','sess','cont'].forEach(s => {
-    document.getElementById('sec-colab-'+s).style.display = (
-      (secao==='home'&&s==='home')||(secao==='diagnostico'&&s==='diag')||
+    var sec = document.getElementById('sec-colab-'+s);
+    if (sec) sec.style.display = (
+      (secao==='diagnostico'&&s==='diag')||
       (secao==='sessoes'&&s==='sess')||(secao==='conteudos'&&s==='cont')
     ) ? 'block' : 'none';
   });
-  if (secao === 'diagnostico') iniciarDiagnostico();
+  // 'diagnostico' no menu = ver histórico, não iniciar novo
+  if (secao === 'diagnostico') verHistoricoDiagnostico();
+  // 'iniciar-diagnostico' = fluxo de novo diagnóstico (com verificação de ciclo)
+  if (secao === 'iniciar-diagnostico') iniciarDiagnostico();
+}
+
+async function verHistoricoDiagnostico() {
+  var sec = document.getElementById('sec-colab-diag');
+  if (!sec) return;
+  sec.style.display = 'block';
+  document.getElementById('sec-colab-home').style.display = 'none';
+  document.getElementById('sec-colab-cont').style.display = 'none';
+
+  var { data: diags } = await sb.from('diagnosticos')
+    .select('*').eq('colaborador_id', perfil.id).eq('status', 'completo')
+    .order('created_at', { ascending: false });
+
+  var formArea = document.getElementById('diag-form-area');
+  var resultArea = document.getElementById('diag-result-area');
+  if (formArea) formArea.style.display = 'none';
+  if (resultArea) resultArea.style.display = 'none';
+
+  var container = document.getElementById('sec-colab-diag');
+
+  // Mostrar histórico de diagnósticos
+  var historico = document.getElementById('diag-historico');
+  if (!historico) {
+    historico = document.createElement('div');
+    historico.id = 'diag-historico';
+    container.appendChild(historico);
+  }
+
+  if (!diags || diags.length === 0) {
+    historico.innerHTML = '<div style="text-align:center;padding:40px 20px">' +
+      '<div style="font-size:32px;margin-bottom:12px">📋</div>' +
+      '<div class="s-titulo" style="margin-bottom:8px">Nenhum diagnóstico ainda</div>' +
+      '<div style="font-size:13px;color:var(--ink2);margin-bottom:20px">Responda o questionário para ver seu perfil psicossocial.</div>' +
+      '<button class="btn-p" onclick="navegarColab(&quot;iniciar-diagnostico&quot;,null)">Fazer diagnóstico agora →</button>' +
+    '</div>';
+    return;
+  }
+
+  var ultimo = diags[0];
+  var burnout = calcularIndiceBurnout(ultimo);
+  var diasDesde = Math.floor((new Date() - new Date(ultimo.created_at)) / (1000*60*60*24));
+  var cicloLivre = ultimo.liberado_gestor || diasDesde >= 90;
+
+  historico.innerHTML =
+    '<div style="margin-bottom:20px">' +
+      '<div class="s-titulo" style="margin-bottom:4px">Meu diagnóstico</div>' +
+      '<div style="font-size:12px;color:var(--ink2)">Último realizado em ' + new Date(ultimo.created_at).toLocaleDateString('pt-BR') + ' · ' + diasDesde + ' dias atrás</div>' +
+    '</div>' +
+    (burnout ? renderCardBurnout(burnout, false) : '') +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+      (cicloLivre
+        ? '<button class="btn-p" style="flex:1" onclick="navegarColab(&quot;iniciar-diagnostico&quot;,null)">Refazer diagnóstico →</button>'
+        : '<button class="btn-sec" style="flex:1;cursor:not-allowed;opacity:.5" disabled>Próximo ciclo em ' + (90 - diasDesde) + ' dias</button>') +
+    '</div>' +
+    (diags.length > 1 ? '<div style="margin-top:20px"><div class="s-titulo" style="margin-bottom:12px">Histórico</div>' +
+      diags.slice(1).map(function(d) {
+        var b = calcularIndiceBurnout(d);
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--neutro2);font-size:13px">' +
+          '<span style="color:var(--ink)">' + new Date(d.created_at).toLocaleDateString('pt-BR') + '</span>' +
+          (b ? '<span style="font-weight:500;color:' + b.corHex + '">' + b.indice + ' · ' + (b.indice <= 25 ? 'Equilibrado' : b.indice <= 50 ? 'Atenção' : b.indice <= 75 ? 'Suporte indicado' : 'Apoio necessário') + '</span>' : '') +
+        '</div>';
+      }).join('') + '</div>' : '');
 }
 
 async function abrirDashboardGestor() {
@@ -1211,7 +1278,7 @@ async function renderConteudos() {
           '<div style="font-family:Cormorant Garamond,serif;font-size:22px;font-weight:600;color:var(--neutro)">Com base no seu perfil de ' + dataD + '</div>' +
           '<div style="font-size:13px;color:rgba(246,244,240,.6);margin-top:4px">Score geral: ' + (diagRecente.score_total || '--') + '/100 · Nível: ' + (diagRecente.nivel_risco === 'baixo' ? 'Baixo' : diagRecente.nivel_risco === 'medio' ? 'Médio' : 'Alto') + '</div>' +
         '</div>' +
-        '<button class="btn-sec" style="font-size:12px;color:var(--neutro);border-color:rgba(255,255,255,.2)" onclick="navegarColab(\'diagnostico\',null)">Refazer diagnóstico</button>' +
+        '<button class="btn-sec" style="font-size:12px;color:var(--neutro);border-color:rgba(255,255,255,.2)" onclick="navegarColab(\'iniciar-diagnostico\',null)">Refazer diagnóstico</button>' +
       '</div>' +
     '</div>';
 
@@ -1273,7 +1340,7 @@ async function renderConteudos() {
       '<div style="font-size:32px;margin-bottom:12px">📋</div>' +
       '<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:600;color:var(--neutro);margin-bottom:8px">Complete o diagnóstico para receber suas trilhas</div>' +
       '<div style="font-size:13px;color:rgba(246,244,240,.6);margin-bottom:16px">O sistema identifica os riscos do seu perfil e recomenda as trilhas mais relevantes para você.</div>' +
-      '<button class="btn-p" onclick="navegarColab(\'diagnostico\',null)">Fazer diagnóstico agora →</button>' +
+      '<button class="btn-p" onclick="navegarColab(\'iniciar-diagnostico\',null)">Fazer diagnóstico agora →</button>' +
     '</div>';
   }
 
@@ -1735,7 +1802,7 @@ function exibirTelaConclusaoTrilha(trilhaId, scoreAntes, scoreDepois, eixoCampo)
       scoreHtml +
       '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px">' +
         '<button class="btn-sec" onclick="renderConteudos()">Ver minhas trilhas</button>' +
-        '<button class="btn-p" onclick="navegarColab(&quot;diagnostico&quot;,null)">Refazer diagnóstico →</button>' +
+        '<button class="btn-p" onclick="navegarColab(&quot;iniciar-diagnostico&quot;,null)">Refazer diagnóstico →</button>' +
       '</div>' +
       '<div style="font-size:12px;color:var(--ink2);margin-top:16px">Refazer o diagnóstico atualiza seu score e mostra a evolução real.</div>' +
     '</div>';
@@ -2329,7 +2396,7 @@ async function abrirHomeColaborador() {
   ${burnoutColab ? '<div id="burnout-colab-card" style="margin-bottom:20px"></div>' : ''}
     ${trilhasRec && trilhasRec.length > 0 ? '<div id="trilhas-colab-home" style="margin-bottom:24px"></div>' : ''}
     <div class="c-grid">
-      <div class="c-card" onclick="navegarColab('diagnostico',null)">
+      <div class="c-card" onclick="navegarColab('iniciar-diagnostico',null)">
         <span class="c-icon">📋</span>
         <h3>Diagnóstico psicossocial</h3>
         <p>${temDiag ? 'Refaça o questionário para atualizar seus dados.' : 'Responda o questionário de 20 perguntas. Leva cerca de 8 minutos.'}</p>
@@ -2354,7 +2421,7 @@ async function abrirHomeColaborador() {
     </div>
     <div id="conts-home" class="loading">Carregando conteúdos...</div>
   `;
-  document.getElementById('header-colab-btn').innerHTML = '<button class="btn-pri" onclick="navegarColab(&quot;diagnostico&quot;,null)">Fazer diagnóstico →</button>';
+  document.getElementById('header-colab-btn').innerHTML = '<button class="btn-pri" onclick="navegarColab(&quot;iniciar-diagnostico&quot;,null)">Fazer diagnóstico →</button>';
   await renderConteudos();
   await renderSessoes('colaborador');
 
