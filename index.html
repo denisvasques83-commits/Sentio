@@ -2231,7 +2231,7 @@ async function renderRelatorio() {
 
   // ── HTML da Matriz de Risco NR-01 ──
   var matrizHtml = '';
-  if (totalDiag > 0) {
+  {
     // Ordenar eixos por prioridade (mais crítico primeiro)
     var eixosOrdenados = eixos.slice().sort(function(a,b) { return (a.prioridade||5) - (b.prioridade||5); });
 
