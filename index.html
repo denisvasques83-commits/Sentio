@@ -2052,12 +2052,48 @@ async function renderRelatorio() {
     elo_trabalho_vida:           { label: 'Elo trabalho e vida social',   campo: 'score_elo' }
   };
 
+  // Severidade base por eixo — baseado na natureza do risco psicossocial
+  const severidadeBase = {
+    organizacao_trabalho:        3, // Alta — sobrecarga gera burnout direto
+    condicoes_trabalho:          2, // Moderada — impacto físico e ergonômico
+    relacoes_socioprofissionais: 3, // Alta — conflitos e assédio têm impacto severo
+    reconhecimento_crescimento:  2, // Moderada — afeta motivação e retenção
+    elo_trabalho_vida:           3  // Alta — desequilíbrio causa exaustão crônica
+  };
+
   const eixos = Object.entries(eixoMap).map(function(entry) {
     const key  = entry[0];
     const info = entry[1];
     const vals = diags ? diags.map(function(d) { return d[info.campo]; }).filter(function(v) { return v != null; }) : [];
     const score = vals.length > 0 ? Math.round(vals.reduce(function(a,b) { return a+b; }, 0) / vals.length) : null;
-    return { key: key, label: info.label, score: score };
+
+    // Probabilidade baseada no score (1=baixa, 2=média, 3=alta)
+    var prob = 1;
+    if (score != null) {
+      if (score >= 70) prob = 3;
+      else if (score >= 40) prob = 2;
+      else prob = 1;
+    }
+
+    // Severidade do eixo
+    var sev = severidadeBase[key] || 2;
+
+    // Classificação NR-01: prob × sev
+    var matriz = prob * sev;
+    var classificacao, corMatriz, prioridade;
+    if (matriz >= 7) {
+      classificacao = 'Intolerável'; corMatriz = '#C0392B'; prioridade = 1;
+    } else if (matriz >= 5) {
+      classificacao = 'Substancial'; corMatriz = '#E67E22'; prioridade = 2;
+    } else if (matriz >= 3) {
+      classificacao = 'Moderado'; corMatriz = '#D4860A'; prioridade = 3;
+    } else if (matriz >= 2) {
+      classificacao = 'Tolerável'; corMatriz = '#27AE60'; prioridade = 4;
+    } else {
+      classificacao = 'Trivial'; corMatriz = '#2A7A4B'; prioridade = 5;
+    }
+
+    return { key, label: info.label, score, prob, sev, classificacao, corMatriz, prioridade };
   }).filter(function(e) { return e.score !== null; });
 
   const eixoCritico  = eixos.length > 0 ? eixos.reduce(function(a,b) { return a.score < b.score ? a : b; }) : null;
@@ -2191,6 +2227,88 @@ async function renderRelatorio() {
     if (p === 'Alto')    return 'rs-alto';
     if (p === 'Médio')   return 'rs-medio';
     return 'rs-baixo';
+  }
+
+  // ── HTML da Matriz de Risco NR-01 ──
+  var matrizHtml = '';
+  if (totalDiag > 0) {
+    // Ordenar eixos por prioridade (mais crítico primeiro)
+    var eixosOrdenados = eixos.slice().sort(function(a,b) { return (a.prioridade||5) - (b.prioridade||5); });
+
+    // Grid 3×3: Probabilidade (linhas) × Severidade (colunas)
+    var matrizGrid = [
+      [null, 'Baixa (1)', 'Moderada (2)', 'Alta (3)'],
+      ['Alta (3)', '#C0392B', '#C0392B', '#7B0000'],
+      ['Média (2)', '#D4860A', '#C0392B', '#C0392B'],
+      ['Baixa (1)', '#2A7A4B', '#D4860A', '#D4860A']
+    ];
+    var labelMatriz = {
+      '#7B0000': 'Intolerável',
+      '#C0392B': 'Substancial',
+      '#D4860A': 'Moderado',
+      '#2A7A4B': 'Tolerável'
+    };
+
+    matrizHtml = '<div class="s-card" style="margin-bottom:20px;padding:20px 24px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:8px">' +
+        '<div>' +
+          '<div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:3px">Matriz de Risco Psicossocial</div>' +
+          '<div style="font-size:12px;color:var(--ink2)">Probabilidade × Severidade · Modelo NR-01/GRO</div>' +
+        '</div>' +
+      '</div>' +
+
+      // Grid visual 3×3
+      '<div style="overflow-x:auto;margin-bottom:20px">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<thead>' +
+            '<tr>' +
+              '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);border-bottom:2px solid var(--neutro2)">Probabilidade / Severidade</th>' +
+              '<th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:var(--ink);border-bottom:2px solid var(--neutro2)">Baixa</th>' +
+              '<th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:var(--ink);border-bottom:2px solid var(--neutro2)">Moderada</th>' +
+              '<th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:var(--ink);border-bottom:2px solid var(--neutro2)">Alta</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody>' +
+            [['Alta', 3], ['Média', 2], ['Baixa', 1]].map(function(row) {
+              var probLabel = row[0], probVal = row[1];
+              return '<tr>' +
+                '<td style="padding:10px 12px;font-weight:600;color:var(--ink);border-bottom:1px solid var(--neutro2)">' + probLabel + '</td>' +
+                [1,2,3].map(function(sev) {
+                  var val = probVal * sev;
+                  var cor = val >= 7 ? '#7B0000' : val >= 5 ? '#C0392B' : val >= 3 ? '#D4860A' : '#2A7A4B';
+                  var label = val >= 7 ? 'Intolerável' : val >= 5 ? 'Substancial' : val >= 3 ? 'Moderado' : 'Tolerável';
+                  // Verificar se algum eixo cai nessa célula
+                  var eixosNaCelula = eixos.filter(function(e) { return e.prob === probVal && e.sev === sev && e.score != null; });
+                  var tooltip = eixosNaCelula.map(function(e) { return e.label.split(' ').slice(0,2).join(' '); }).join(', ');
+                  return '<td style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--neutro2)">' +
+                    '<div style="background:' + cor + '22;border:1.5px solid ' + cor + ';border-radius:8px;padding:8px 6px' + (tooltip ? ';position:relative' : '') + '">' +
+                      '<div style="font-size:10px;font-weight:700;color:' + cor + '">' + label + '</div>' +
+                      (tooltip ? '<div style="font-size:9px;color:' + cor + ';opacity:.7;margin-top:2px">' + tooltip + '</div>' : '') +
+                    '</div>' +
+                  '</td>';
+                }).join('') +
+              '</tr>';
+            }).join('') +
+          '</tbody>' +
+        '</table>' +
+      '</div>' +
+
+      // Resumo dos eixos na matriz
+      '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin-bottom:10px">Classificação dos eixos psicossociais</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+      eixosOrdenados.filter(function(e){ return e.score != null; }).map(function(e) {
+        var probLabel = e.prob === 3 ? 'Alta' : e.prob === 2 ? 'Média' : 'Baixa';
+        var sevLabel  = e.sev  === 3 ? 'Alta' : e.sev  === 2 ? 'Moderada' : 'Baixa';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;background:' + e.corMatriz + '11;border:1px solid ' + e.corMatriz + '33">' +
+          '<div style="flex:1">' +
+            '<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px">' + e.label + '</div>' +
+            '<div style="font-size:11px;color:var(--ink2)">Prob: ' + probLabel + ' · Sev: ' + sevLabel + ' · Score: ' + e.score + '/100</div>' +
+          '</div>' +
+          '<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:100px;background:' + e.corMatriz + '22;color:' + e.corMatriz + '">' + e.classificacao + '</span>' +
+        '</div>';
+      }).join('') +
+      '</div>' +
+    '</div>';
   }
 
   // ── HTML do inventário ──
@@ -2337,7 +2455,8 @@ async function renderRelatorio() {
       '</div>' +
       '<span class="tag-dourado">' + inventario.length + ' eixos avaliados</span>' +
     '</div>' +
-    '<div style="margin-bottom:24px">' + inventarioHtml + '</div>' +
+    '<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2);margin-bottom:12px">2. MATRIZ DE RISCO PSICOSSOCIAL</div>' + matrizHtml + '</div>' +
+    '<div style="margin-bottom:24px"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2);margin-bottom:12px">3. INVENTÁRIO DETALHADO DE RISCOS</div>' + inventarioHtml + '</div>' +
 
     // Plano de ação
     '<div class="s-card" style="margin-bottom:24px">' +
